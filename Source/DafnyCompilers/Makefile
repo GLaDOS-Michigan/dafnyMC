@@ -13,7 +13,7 @@ CSharpDafnyAST.dfy: $(DafnyPipeline).csproj $(DafnyAST).cs $(ASTExport)/Program.
 %.cs: %.dfy CSharpCompat.dfy DafnyCompat.dfy CSharpDafnyAST.dfy $(DafnyRuntime)
 	dotnet run --project $(DafnyDriver).csproj -- \
 		/spillTargetCode:3 /compile:0 /noVerify $<
-	sed -i 's/__AUTOGEN__//g' "$@"
+	sed -i.bak -e 's/__AUTOGEN__//g' "$@"
 
 CSharp/%.cs: %.cs
 	cp $< $@
