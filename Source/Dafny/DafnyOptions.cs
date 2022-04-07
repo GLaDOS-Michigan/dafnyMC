@@ -84,7 +84,8 @@ namespace Microsoft.Dafny {
       Java = 8,
       Cpp = 16,
       Php = 32,
-      Python = 64
+      Python = 64,
+      TLA = 128
     }
 
     public CompilationTarget CompileTarget = CompilationTarget.Csharp;
@@ -231,6 +232,9 @@ namespace Microsoft.Dafny {
               CompileTarget = CompilationTarget.Php;
             } else if (args[ps.i].Equals("py")) {
               CompileTarget = CompilationTarget.Python;
+            } else if (args[ps.i].Equals("tla")) {
+              CompileTarget = CompilationTarget.TLA;
+              Console.WriteLine("Wow, you are using the /compileTarget:tla feature!");
             } else {
               InvalidArgumentError(name, ps);
             }

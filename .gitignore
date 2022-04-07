@@ -64,3 +64,6 @@ Source/.vs
 node_modules/
 package.json
 package-lock.json
+
+# Tony's local stuff
+**/*.icloud

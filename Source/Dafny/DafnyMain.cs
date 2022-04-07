@@ -104,11 +104,12 @@ namespace Microsoft.Dafny {
     public static string ParseCheck(IList<DafnyFile/*!*/>/*!*/ files, string/*!*/ programName, ErrorReporter reporter, out Program program)
     //modifies Bpl.DafnyOptions.O.XmlSink.*;
     {
+      Console.WriteLine("TONY: Dafny.Main.ParseCheck is Parsing files");
       string err = Parse(files, programName, reporter, out program);
       if (err != null) {
         return err;
       }
-
+      Console.WriteLine("TONY: Dafny.Main.ParseCheck is resolving program");
       return Resolve(program, reporter);
     }
 

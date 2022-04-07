@@ -242,6 +242,8 @@ namespace Microsoft.Dafny {
       Contract.Requires(cce.NonNullElements(dafnyFiles));
       var dafnyFileNames = DafnyFile.fileNames(dafnyFiles);
 
+      Console.WriteLine("TONY: Look ma! Processing Files! ThreadMain calls DafnyDriver.ProcessFiles");
+
       ExitValue exitValue = ExitValue.SUCCESS;
       if (DafnyOptions.O.TestGenOptions.WarnDeadCode) {
         foreach (var line in DafnyTestGeneration.Main
@@ -287,19 +289,22 @@ namespace Microsoft.Dafny {
 
       Dafny.Program dafnyProgram;
       string programName = dafnyFileNames.Count == 1 ? dafnyFileNames[0] : "the_program";
+      Console.WriteLine("TONY: DafnyDriver.ProcessFiles now calling Dafny.Main.ParseCheck");
       string err = Dafny.Main.ParseCheck(dafnyFiles, programName, reporter, out dafnyProgram);
+      Console.WriteLine("TONY: Dafny.Main.ParseCheck returns control back to DafnyDriver.ProcessFiles. At this point, we have the type-resolved dafny AST in the variable 'dafnyProgram'");
       if (err != null) {
         exitValue = ExitValue.DAFNY_ERROR;
         ExecutionEngine.printer.ErrorWriteLine(Console.Out, err);
       } else if (dafnyProgram != null && !DafnyOptions.O.NoResolve && !DafnyOptions.O.NoTypecheck
           && DafnyOptions.O.DafnyVerify) {
-
+        Console.WriteLine("TONY: Translate to Boogie and verify");
         var boogiePrograms = Translate(options, dafnyProgram);
 
         Dictionary<string, PipelineStatistics> statss;
         PipelineOutcome oc;
         string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
         var verified = Boogie(options, baseName, boogiePrograms, programId, out statss, out oc);
+        Console.WriteLine("TONY: Verification done. Now maybe compile to target language should the user have asked for it");
         var compiled = Compile(dafnyFileNames[0], otherFileNames, dafnyProgram, oc, statss, verified);
         exitValue = verified && compiled ? ExitValue.SUCCESS : !verified ? ExitValue.VERIFICATION_ERROR : ExitValue.COMPILE_ERROR;
       }
