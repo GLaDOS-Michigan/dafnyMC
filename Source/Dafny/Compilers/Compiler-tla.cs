@@ -21,9 +21,15 @@ namespace Microsoft.Dafny {
     const string DafnyMapClass = "_dafny.Map";
     protected override string StmtTerminator { get => ""; }
     protected override void EmitHeader(Program program, ConcreteSyntaxTree wr) {
-      wr.WriteLine("# Dafny program {0} compiled into TLA", program.Name);
+      wr.WriteLine("-------------------- MODULE {0} --------------------", Path.GetFileNameWithoutExtension(program.Name));
+      wr.WriteLine("\\* Dafny program {0} compiled into TLA", program.Name);
       ReadRuntimeSystem("DafnyRuntime.tla", wr);
       wr.WriteLine();
+    }
+
+    protected override void EmitFooter(Program program, ConcreteSyntaxTree wr) {
+      wr.WriteLine();
+      wr.WriteLine("====================================================");
     }
 
     public override void EmitCallToMain(Method mainMethod, string baseName, ConcreteSyntaxTree wr) {
@@ -728,25 +734,17 @@ namespace Microsoft.Dafny {
     public override bool CompileTargetProgram(string dafnyProgramName, string targetProgramText,
       string /*?*/ callToMain, string /*?*/ targetFilename, ReadOnlyCollection<string> otherFileNames,
       bool runAfterCompile, TextWriter outputWriter, out object compilationResult) {
+      // No need to try to compile TLA
+      Console.WriteLine("TONY: Why you do dis?");
       compilationResult = null;
-      if (runAfterCompile) {
-        Contract.Assert(callToMain != null); // this is part of the contract of CompileTargetProgram
-        // Since the program is to be run soon, nothing further is done here. Any compilation errors (that is, any errors
-        // in the emitted program--this should never happen if the compiler itself is correct) will be reported as 'python'
-        // will run the program.
-        return true;
-      } else {
-        // compile now
-        return SendToNewPythonProcess(dafnyProgramName, targetProgramText, null, targetFilename, otherFileNames,
-          outputWriter);
-      }
+      return true;
     }
 
     public override bool RunTargetProgram(string dafnyProgramName, string targetProgramText, string /*?*/ callToMain,
         string targetFilename, ReadOnlyCollection<string> otherFileNames, object compilationResult, TextWriter outputWriter) {
-
-      return SendToNewPythonProcess(dafnyProgramName, targetProgramText, callToMain, targetFilename, otherFileNames,
-        outputWriter);
+      // No need to try to run TLA    
+      Console.WriteLine("TONY: Why you do dis?");
+      return true;
     }
 
     bool SendToNewPythonProcess(string dafnyProgramName, string targetProgramText, string /*?*/ callToMain,
