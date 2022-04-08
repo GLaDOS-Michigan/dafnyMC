@@ -27,6 +27,9 @@
 # Python output
 **/*.py
 
+# TLA output
+**/*-tla
+
 node_modules/
 package-lock.json
 packages
