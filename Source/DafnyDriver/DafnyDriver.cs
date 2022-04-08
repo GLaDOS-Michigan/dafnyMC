@@ -291,7 +291,7 @@ namespace Microsoft.Dafny {
       string programName = dafnyFileNames.Count == 1 ? dafnyFileNames[0] : "the_program";
       Console.WriteLine("TONY: DafnyDriver.ProcessFiles now calling Dafny.Main.ParseCheck");
       string err = Dafny.Main.ParseCheck(dafnyFiles, programName, reporter, out dafnyProgram);
-      Console.WriteLine("TONY: Dafny.Main.ParseCheck returns control back to DafnyDriver.ProcessFiles. At this point, we have the type-resolved dafny AST in the variable 'dafnyProgram'");
+      Console.WriteLine("TONY: Dafny.Main.ParseCheck returns to DafnyDriver.ProcessFiles. Type-resolved dafny AST now in the variable 'dafnyProgram'");
       if (err != null) {
         exitValue = ExitValue.DAFNY_ERROR;
         ExecutionEngine.printer.ErrorWriteLine(Console.Out, err);
@@ -304,7 +304,7 @@ namespace Microsoft.Dafny {
         PipelineOutcome oc;
         string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
         var verified = Boogie(options, baseName, boogiePrograms, programId, out statss, out oc);
-        Console.WriteLine("TONY: Verification done. Now maybe compile to target language should the user have asked for it");
+        Console.WriteLine("TONY: Verification done");
         var compiled = Compile(dafnyFileNames[0], otherFileNames, dafnyProgram, oc, statss, verified);
         exitValue = verified && compiled ? ExitValue.SUCCESS : !verified ? ExitValue.VERIFICATION_ERROR : ExitValue.COMPILE_ERROR;
       }
@@ -459,7 +459,12 @@ namespace Microsoft.Dafny {
         case PipelineOutcome.VerificationCompleted:
           WriteStatss(statss);
           if ((DafnyOptions.O.Compile && verified && !DafnyOptions.O.UserConstrainedProcsToCheck) || DafnyOptions.O.ForceCompile) {
-            compiled = CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, true);
+            if (DafnyOptions.O.CompileTarget == DafnyOptions.CompilationTarget.TLA) {
+              // Don't try to compile TLA to machine code
+              compiled = CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, false);
+            } else {
+              compiled = CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, true);
+            }
           } else if ((2 <= DafnyOptions.O.SpillTargetCode && verified && !DafnyOptions.O.UserConstrainedProcsToCheck) || 3 <= DafnyOptions.O.SpillTargetCode) {
             compiled = CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, false);
           }
@@ -582,6 +587,10 @@ namespace Microsoft.Dafny {
         case DafnyOptions.CompilationTarget.Python:
           targetExtension = "py";
           break;
+        case DafnyOptions.CompilationTarget.TLA:
+          targetExtension = "tla";
+          targetBaseDir = baseName + "-tla/src";
+          break;
 
         default:
           Contract.Assert(false);
@@ -686,22 +695,32 @@ namespace Microsoft.Dafny {
       switch (DafnyOptions.O.CompileTarget) {
         case DafnyOptions.CompilationTarget.Csharp:
         default:
+          Console.WriteLine("TONY: Compiling to C#");
           compiler = new Dafny.CsharpCompiler(dafnyProgram.reporter);
           break;
         case DafnyOptions.CompilationTarget.JavaScript:
+          Console.WriteLine("TONY: Compiling to JS");
           compiler = new Dafny.JavaScriptCompiler(dafnyProgram.reporter);
           break;
         case DafnyOptions.CompilationTarget.Go:
+          Console.WriteLine("TONY: Compiling to Go");
           compiler = new Dafny.GoCompiler(dafnyProgram.reporter);
           break;
         case DafnyOptions.CompilationTarget.Java:
+          Console.WriteLine("TONY: Compiling to Java");
           compiler = new Dafny.JavaCompiler(dafnyProgram.reporter);
           break;
         case DafnyOptions.CompilationTarget.Cpp:
+          Console.WriteLine("TONY: Compiling to C++");
           compiler = new Dafny.CppCompiler(dafnyProgram.reporter, otherFileNames);
           break;
         case DafnyOptions.CompilationTarget.Python:
+          Console.WriteLine("TONY: Compiling to Python");
           compiler = new Dafny.PythonCompiler(dafnyProgram.reporter);
+          break;
+        case DafnyOptions.CompilationTarget.TLA:
+          Console.WriteLine("TONY: Compiling to TLA");
+          compiler = new Dafny.TLACompiler(dafnyProgram.reporter);
           break;
       }
 
@@ -714,7 +733,9 @@ namespace Microsoft.Dafny {
       var otherFiles = new Dictionary<string, string>();
       {
         var output = new ConcreteSyntaxTree();
+        Console.WriteLine("TONY: Calling `compiler.Compile(dafnyProgram, output)`");
         compiler.Compile(dafnyProgram, output);
+        Console.WriteLine("TONY: `compiler.Compile` returns");
         var writerOptions = new WriterState();
         var targetProgramTextWriter = new StringWriter();
         var files = new Queue<FileSyntax>();
@@ -749,14 +770,17 @@ namespace Microsoft.Dafny {
       }
 
       if (targetProgramHasErrors) {
+        Console.WriteLine("TONY: Target program has errors");
         return false;
       }
       // If we got here, compilation succeeded
       if (!invokeCompiler) {
+        Console.WriteLine("TONY: Don't invoke compiler, we are done");
         return true; // If we're not asked to invoke the target compiler, we can report success
       }
 
       // compile the program into an assembly
+      Console.WriteLine("TONY: Compile program into assembly");
       var compiledCorrectly = compiler.CompileTargetProgram(dafnyProgramName, targetProgramText, callToMain, paths.Filename, otherFileNames,
         hasMain && DafnyOptions.O.RunAfterCompile, outputWriter, out var compilationResult);
       if (compiledCorrectly && DafnyOptions.O.RunAfterCompile) {
