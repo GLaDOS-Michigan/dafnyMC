@@ -33,7 +33,7 @@ namespace Microsoft.Dafny {
     protected override ConcreteSyntaxTree CreateModule(string moduleName, bool isDefault, bool isExtern,
         string libraryName, ConcreteSyntaxTree wr) {
       Console.WriteLine("        TONY: Creating module " + moduleName);
-      return wr.NewBlock($"\\* Begin Dafny module {moduleName}", open: BlockStyle.Nothing, close: BlockStyle.Nothing);
+      return wr.NewBlock($"\\* Begin Dafny module {moduleName}\n\n", open: BlockStyle.Nothing, close: BlockStyle.Nothing);
     }
 
     private static string MangleName(string name) {
@@ -60,9 +60,31 @@ namespace Microsoft.Dafny {
     }
 
 
-    /*****************************************************************************************
-    *                                      Unsupported                                       *
-    ******************************************************************************************/
+    protected override IClassWriter DeclareDatatype(DatatypeDecl dt, ConcreteSyntaxTree wr) {
+      Console.WriteLine("            TONY: Dealing with DatatypeDecl");
+      Console.WriteLine("                Name: {0}", dt.Name);
+      if (dt.IsRecordType) {
+        if (dt.Ctors.Count > 1) {
+          throw new NotImplementedException();
+        }
+        var ctor = dt.Ctors[0];
+        wr.Write("{0} == ", dt.Name);
+        wr.Write("[");
+        var formals_strings = from f in ctor.Formals select String.Format("{0} : {1}", f.Name, f.Type.ToString());
+        wr.Write(String.Join(", ", formals_strings));
+        wr.Write("]");
+        wr.WriteLine();
+      } else {
+        throw new NotImplementedException();
+      }
+      return null;
+    }
+
+
+
+    /*************************************************************************************
+    *                                    Unsupported                                     *
+    **************************************************************************************/
     protected override string GetHelperModuleName() {
       throw new NotImplementedException();
     }
@@ -292,9 +314,9 @@ namespace Microsoft.Dafny {
 
 
 
-    /*****************************************************************************************
-    *                                         Utils                                          *
-    ******************************************************************************************/
+    /*************************************************************************************
+    *                                       Utils                                        *
+    **************************************************************************************/
 
     protected override string IdProtect(string name) {
       return PublicIdProtect(name);
@@ -326,11 +348,6 @@ namespace Microsoft.Dafny {
     protected override void GetSpecialFieldInfo(SpecialField.ID id, object idParam, Type receiverType,
         out string compiledName, out string preString, out string postString) {
       throw new NotImplementedException();
-    }
-
-    protected override IClassWriter DeclareDatatype(DatatypeDecl dt, ConcreteSyntaxTree wr) {
-      // throw new NotImplementedException();
-      return null;
     }
 
     protected override ConcreteSyntaxTree EmitMapBuilder_Add(MapType mt, IToken tok, string collName, Expression term,
