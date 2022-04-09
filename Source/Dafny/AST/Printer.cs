@@ -33,6 +33,42 @@ namespace Microsoft.Dafny {
       this.printMode = printMode;
     }
 
+    public static string BoundVarToString(BoundVar bv) {
+      Contract.Requires(bv != null);
+      using (var wr = new System.IO.StringWriter()) {
+        wr.Write("{0}", bv.DisplayName);
+        string typeName = bv.Type.TypeName(null, true);
+        wr.Write(": {0}", typeName);
+        return wr.ToString();
+      }
+    }
+
+    public static string WitnessKindToString(SubsetTypeDecl.WKind wk) {
+      using (var wr = new System.IO.StringWriter()) {
+        switch (wk) {
+          case SubsetTypeDecl.WKind.Ghost:
+            wr.Write("ghost ");
+            break;
+          case SubsetTypeDecl.WKind.Compiled:
+            wr.Write("Compiled, witness ");
+            break;
+          case SubsetTypeDecl.WKind.OptOut:
+            wr.Write("OptOut, witness *");
+            break;
+          case SubsetTypeDecl.WKind.Special:
+            wr.Write("/*special witness*/");
+            break;
+          case SubsetTypeDecl.WKind.CompiledZero:
+            wr.Write("CompiledZero");
+            break;
+          default:
+            Contract.Assert(false);  // unexpected WKind
+            break;
+        }
+        return wr.ToString();
+      }
+    }
+
     public static string ExprToString(Expression expr) {
       Contract.Requires(expr != null);
       using (var wr = new System.IO.StringWriter()) {
