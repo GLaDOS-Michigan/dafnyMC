@@ -20,7 +20,11 @@ namespace Microsoft.Dafny {
     protected override void EmitHeader(Program program, ConcreteSyntaxTree wr) {
       wr.WriteLine("---------------------------------- MODULE {0} ----------------------------------", Path.GetFileNameWithoutExtension(program.Name));
       wr.WriteLine("\\* Dafny program {0} compiled into TLA", program.Name);
-      ReadRuntimeSystem("DafnyRuntime.tla", wr);
+      // ReadRuntimeSystem("DafnyRuntime.tla", wr);
+      wr.WriteLine();
+      wr.WriteLine("EXTENDS Integers");  // Common enough to always do this
+      wr.WriteLine();
+      wr.WriteLine("VARIABLE s");        // Always use a single state variable s
       wr.WriteLine();
     }
 
@@ -36,9 +40,47 @@ namespace Microsoft.Dafny {
       return wr.NewBlock($"\\* Begin Dafny module {moduleName}\n\n", open: BlockStyle.Nothing, close: BlockStyle.Nothing);
     }
 
-    private static string MangleName(string name) {
-      return name.StartsWith("__") ? name[1..] : name;
+    protected override IClassWriter CreateClass(string moduleName, string name, bool isExtern, string fullPrintName,
+      List<TypeParameter> typeParameters, TopLevelDecl cls, List<Type> superClasses, IToken tok, ConcreteSyntaxTree wr) {
+      return new ClassWriter(this, null, wr);
     }
+
+    protected override IClassWriter DeclareDatatype(DatatypeDecl dt, ConcreteSyntaxTree wr) {
+      Console.WriteLine("            TONY: Dealing with DatatypeDecl");
+      Console.WriteLine("                Name: {0}", dt.Name);
+      if (dt.IsRecordType) {
+        if (dt.Ctors.Count > 1) {
+          throw new NotImplementedException();
+        }
+        var ctor = dt.Ctors[0];
+        wr.WriteLine("{0} == [{1}]", dt.Name, Printer.FormalListToString(ctor.Formals));
+      } else {
+        throw new NotImplementedException();
+      }
+      return null;
+    }
+
+    public void DeclareFunction(Function f, ConcreteSyntaxTree wr) {
+      Console.WriteLine("                Name: {0}", f.Name);
+      // Console.WriteLine("                Formals: [{0}]", Printer.FormalListToString(f.Formals));      
+      // Console.WriteLine("                Result type: {0}", f.ResultType.ToString());
+      // Console.WriteLine("                Body: {0}", Printer.ExprToString(f.Body));
+      if (f.ResultType == Type.Bool) {
+        wr.WriteLine("{0} == {1}", f.Name, BooleanExprToTla(f.Body));
+        wr.WriteLine();
+      } else {
+        throw new NotImplementedException();
+      }
+    }
+
+    private string BooleanExprToTla(Expression expr) {
+      // TODO: Implement
+      return Printer.ExprToString(expr);
+    }
+
+    /*************************************************************************************
+    *                                    Unsupported                                     *
+    **************************************************************************************/
 
     protected override void DeclareSubsetType(SubsetTypeDecl sst, ConcreteSyntaxTree wr) {
       Console.WriteLine("            TONY: Dealing with SubsetTypeDecl");
@@ -49,42 +91,15 @@ namespace Microsoft.Dafny {
       if (sst.WitnessKind == SubsetTypeDecl.WKind.Compiled || sst.WitnessKind == SubsetTypeDecl.WKind.Ghost) {
         Console.WriteLine("                Witness: {0}", Printer.ExprToString(sst.Witness));
       }
-
+      throw new NotImplementedException();
       // var cw = (ClassWriter)CreateClass(IdProtect(sst.EnclosingModuleDefinition.CompileName), IdName(sst), sst, wr);
       // var w = cw.MethodWriter;
       // var udt = UserDefinedType.FromTopLevelDecl(sst.tok, sst);
       // string d;
       // d = TypeInitializationValue(udt, wr, sst.tok, false, false);
-
       // w.NewBlock("def Default():", "", BlockStyle.Newline, BlockStyle.Nothing).WriteLine($"return {d}", "");
     }
 
-
-    protected override IClassWriter DeclareDatatype(DatatypeDecl dt, ConcreteSyntaxTree wr) {
-      Console.WriteLine("            TONY: Dealing with DatatypeDecl");
-      Console.WriteLine("                Name: {0}", dt.Name);
-      if (dt.IsRecordType) {
-        if (dt.Ctors.Count > 1) {
-          throw new NotImplementedException();
-        }
-        var ctor = dt.Ctors[0];
-        wr.Write("{0} == ", dt.Name);
-        wr.Write("[");
-        var formals_strings = from f in ctor.Formals select String.Format("{0} : {1}", f.Name, f.Type.ToString());
-        wr.Write(String.Join(", ", formals_strings));
-        wr.Write("]");
-        wr.WriteLine();
-      } else {
-        throw new NotImplementedException();
-      }
-      return null;
-    }
-
-
-
-    /*************************************************************************************
-    *                                    Unsupported                                     *
-    **************************************************************************************/
     protected override string GetHelperModuleName() {
       throw new NotImplementedException();
     }
@@ -288,11 +303,6 @@ namespace Microsoft.Dafny {
       throw new NotImplementedException();
     }
 
-    protected override IClassWriter CreateClass(string moduleName, string name, bool isExtern, string fullPrintName,
-        List<TypeParameter> typeParameters, TopLevelDecl cls, List<Type> superClasses, IToken tok, ConcreteSyntaxTree wr) {
-      throw new NotImplementedException();
-    }
-
     protected override IClassWriter CreateTrait(string name, bool isExtern, List<TypeParameter> typeParameters,
       List<Type> superClasses, IToken tok,
       ConcreteSyntaxTree wr) {
@@ -310,23 +320,6 @@ namespace Microsoft.Dafny {
 
     protected override void EmitTupleSelect(string prefix, int i, ConcreteSyntaxTree wr) {
       throw new NotImplementedException();
-    }
-
-
-
-    /*************************************************************************************
-    *                                       Utils                                        *
-    **************************************************************************************/
-
-    protected override string IdProtect(string name) {
-      return PublicIdProtect(name);
-    }
-    public static string PublicIdProtect(string name) {
-      Contract.Requires(name != null);
-      switch (name) {
-        default:
-          return MangleName(name);
-      }
     }
 
     protected override void EmitSeqSelectRange(Expression source, Expression lo, Expression hi, bool fromArray, bool inLetExprBody, ConcreteSyntaxTree wr) {
@@ -455,6 +448,78 @@ namespace Microsoft.Dafny {
 
 
 
+    /*************************************************************************************
+    *                                       Utils                                        *
+    **************************************************************************************/
+
+    private static string MangleName(string name) {
+      return name.StartsWith("__") ? name[1..] : name;
+    }
+
+    protected override string IdProtect(string name) {
+      return PublicIdProtect(name);
+    }
+    public static string PublicIdProtect(string name) {
+      Contract.Requires(name != null);
+      switch (name) {
+        default:
+          return MangleName(name);
+      }
+    }
+
+    protected class ClassWriter : IClassWriter {
+      public readonly TLACompiler Compiler;
+      public readonly ConcreteSyntaxTree InstanceMemberWriter;
+      public readonly ConcreteSyntaxTree StaticMemberWriter;
+      public readonly ConcreteSyntaxTree CtorBodyWriter;
+
+      public ClassWriter(TLACompiler compiler, ConcreteSyntaxTree instanceMemberWriter, ConcreteSyntaxTree/*?*/ ctorBodyWriter, ConcreteSyntaxTree/*?*/ staticMemberWriter = null) {
+        Contract.Requires(compiler != null);
+        Contract.Requires(instanceMemberWriter != null);
+        this.Compiler = compiler;
+        this.InstanceMemberWriter = instanceMemberWriter;
+        this.CtorBodyWriter = ctorBodyWriter;
+        this.StaticMemberWriter = staticMemberWriter ?? instanceMemberWriter;
+      }
+
+      public ConcreteSyntaxTree Writer(bool isStatic, bool createBody, MemberDecl/*?*/ member) {
+        if (createBody) {
+          if (isStatic || (member?.EnclosingClass is TraitDecl && Compiler.NeedsCustomReceiver(member))) {
+            return StaticMemberWriter;
+          }
+        }
+
+        return InstanceMemberWriter;
+      }
+
+      public ConcreteSyntaxTree /*?*/ CreateMethod(Method m, List<TypeArgumentInstantiation> typeArgs, bool createBody, bool forBodyInheritance, bool lookasideBody) {
+        throw new NotSupportedException();
+      }
+
+      public ConcreteSyntaxTree /*?*/ CreateFunction(string name, List<TypeArgumentInstantiation> typeArgs, List<Formal> formals, Type resultType, Bpl.IToken tok, bool isStatic, bool createBody, MemberDecl member, bool forBodyInheritance, bool lookasideBody) {
+        return CtorBodyWriter;
+      }
+
+      public ConcreteSyntaxTree /*?*/ CreateGetter(string name, TopLevelDecl enclosingDecl, Type resultType, Bpl.IToken tok, bool isStatic, bool isConst, bool createBody, MemberDecl /*?*/ member, bool forBodyInheritance) {
+        throw new NotSupportedException();
+      }
+
+      public ConcreteSyntaxTree /*?*/ CreateGetterSetter(string name, Type resultType, Bpl.IToken tok, bool isStatic, bool createBody, MemberDecl /*?*/ member, out ConcreteSyntaxTree setterWriter, bool forBodyInheritance) {
+        throw new NotSupportedException();
+      }
+
+      public void DeclareField(string name, TopLevelDecl enclosingDecl, bool isStatic, bool isConst, Type type, Bpl.IToken tok, string rhs, Field field) {
+        throw new NotSupportedException();
+      }
+
+      public void InitializeField(Field field, Type instantiatedFieldType, TopLevelDeclWithMembers enclosingClass) {
+        throw new NotSupportedException(); // InitializeField should be called only for those compilers that set ClassesRedeclareInheritedFields to false.
+      }
+
+      public ConcreteSyntaxTree /*?*/ ErrorWriter() => InstanceMemberWriter;
+
+      public void Finish() { }
+    }
 
     /*****************************************************************************************
     *                                 Machine Code Procedures                                *

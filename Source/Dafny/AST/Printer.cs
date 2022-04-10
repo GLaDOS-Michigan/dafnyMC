@@ -33,6 +33,23 @@ namespace Microsoft.Dafny {
       this.printMode = printMode;
     }
 
+    public static string FormalListToString(List<Formal> fl) {
+      Contract.Requires(fl != null);
+      using (var wr = new System.IO.StringWriter()) {
+        var formals_strings = from f in fl select FormalToString(f);
+        wr.Write(String.Join(", ", formals_strings));
+        return wr.ToString();
+      }
+    }
+
+    public static string FormalToString(Formal f) {
+      Contract.Requires(f != null);
+      using (var wr = new System.IO.StringWriter()) {
+        wr.Write("{0} : {1}", f.Name, f.Type.ToString());
+        return wr.ToString();
+      }
+    }
+
     public static string BoundVarToString(BoundVar bv) {
       Contract.Requires(bv != null);
       using (var wr = new System.IO.StringWriter()) {
