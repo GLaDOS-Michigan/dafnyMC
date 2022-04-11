@@ -1204,23 +1204,23 @@ namespace Microsoft.Dafny {
               Error(d.tok, "Opaque type ('{0}') cannot be compiled; perhaps make it a type synonym or use :extern.", wr, at.FullName);
             }
           } else if (d is TypeSynonymDecl) {
-            Console.WriteLine("        TONY: TypeSynonymDecl");
+            Console.WriteLine("            TONY: TypeSynonymDecl");
             var sst = d as SubsetTypeDecl;
             if (sst != null) {
               DeclareSubsetType(sst, wr);
               v.Visit(sst);
             } else {
-              Console.WriteLine("            TONY: Ignore");
+              Console.WriteLine("          TONY: Ignore");
               continue;
             }
           } else if (d is NewtypeDecl) {
-            Console.WriteLine("        TONY: NewtypeDecl");
+            Console.WriteLine("            TONY: NewtypeDecl");
             var nt = (NewtypeDecl)d;
             var w = DeclareNewtype(nt, wr);
             v.Visit(nt);
             CompileClassMembers(program, nt, w);
           } else if (d is DatatypeDecl) {
-            Console.WriteLine("        TONY: DatatypeDecl");
+            Console.WriteLine("            TONY: DatatypeDecl");
             var dt = (DatatypeDecl)d;
             CheckForCapitalizationConflicts(dt.Ctors);
             foreach (var ctor in dt.Ctors) {
@@ -1233,7 +1233,7 @@ namespace Microsoft.Dafny {
               continue;
             }
           } else if (d is IteratorDecl) {
-            Console.WriteLine("        TONY: IteratorDecl");
+            Console.WriteLine("            TONY: IteratorDecl");
             var iter = (IteratorDecl)d;
             if (DafnyOptions.O.ForbidNondeterminism && iter.Outs.Count > 0) {
               Error(iter.tok, "since yield parameters are initialized arbitrarily, iterators are forbidden by /definiteAssignment:3 option", wr);
@@ -1247,12 +1247,12 @@ namespace Microsoft.Dafny {
             }
 
           } else if (d is TraitDecl trait) {
-            Console.WriteLine("        TONY: TraitDecl");
+            Console.WriteLine("            TONY: TraitDecl");
             // writing the trait
             var w = CreateTrait(trait.CompileName, trait.IsExtern(out _, out _), trait.TypeArgs, trait.ParentTypeInformation.UniqueParentTraits(), trait.tok, wr);
             CompileClassMembers(program, trait, w);
           } else if (d is ClassDecl cl) {
-            Console.WriteLine("        TONY: ClassDecl");
+            Console.WriteLine("            TONY: ClassDecl");
             var include = true;
             if (cl.IsDefaultClass) {
               Predicate<MemberDecl> compilationMaterial = x =>
@@ -1709,7 +1709,7 @@ namespace Microsoft.Dafny {
 
       foreach (MemberDecl memberx in c.Members) {
         var member = (memberx as Function)?.ByMethodDecl ?? memberx;
-        Console.WriteLine("            TONY: Memeber {0}", member.Name);
+        Console.WriteLine("                TONY: Memeber {0}", member.Name);
         if (!member.IsStatic) {
           thisContext = c;
         }
@@ -1793,7 +1793,7 @@ namespace Microsoft.Dafny {
             v.Visit(((ConstantField)f).Rhs);
           }
         } else if (member is Function) {
-          Console.WriteLine("            TONY: is Function");
+          Console.WriteLine("                TONY: is Function");
           var f = (Function)member;
           if (f.Body == null && !(c is TraitDecl && !f.IsStatic) &&
               !(!DafnyOptions.O.DisallowExterns && (Attributes.Contains(f.Attributes, "dllimport") || (IncludeExternMembers && Attributes.Contains(f.Attributes, "extern"))))) {
