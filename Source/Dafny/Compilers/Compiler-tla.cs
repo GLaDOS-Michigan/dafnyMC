@@ -17,6 +17,13 @@ public class TLACompiler : Compiler {
     public override string TargetLanguage => "TLA";
     protected override string StmtTerminator { get => ""; }
 
+    protected string SystemState = "State";
+    protected string InitPredicate = "Init";
+    protected string NextPredicate = "Next";
+
+    protected string CurrentStateVar = "s";
+    protected string NextStateVar = "s'";
+
     protected override void EmitHeader(Program program, ConcreteSyntaxTree wr) {
         wr.WriteLine("---------------------------------- MODULE {0} ----------------------------------", Path.GetFileNameWithoutExtension(program.Name));
         wr.WriteLine("\\* Dafny program {0} compiled into TLA", program.Name);
@@ -24,11 +31,15 @@ public class TLACompiler : Compiler {
         wr.WriteLine();
         wr.WriteLine("EXTENDS Integers");    // Common enough to always do this
         wr.WriteLine();
-        wr.WriteLine("VARIABLE s");                // Always use a single state variable s
+        wr.WriteLine("VARIABLE {0}", CurrentStateVar); 
         wr.WriteLine();
+        // Link local type declarations to dafny type
+        wr.WriteLine("int == Int");
+    
     }
 
     protected override void EmitFooter(Program program, ConcreteSyntaxTree wr) {
+        wr.WriteLine("Spec == {0} /\\ [][{1}]_{2}", InitPredicate, NextPredicate, CurrentStateVar);
         wr.WriteLine();
         wr.WriteLine("==========================================================================================");
         wr.WriteLine();
@@ -53,11 +64,15 @@ public class TLACompiler : Compiler {
                 throw new NotImplementedException();
             }
             var ctor = dt.Ctors[0];
-            wr.WriteLine("{0} == [{1}]", dt.Name, Printer.FormalListToString(ctor.Formals));
+            wr.WriteLine("{0} == [{1}]", dt.Name, RecordFormalsToTla(ctor.Formals));
         } else {
             throw new NotImplementedException();
         }
         return null;
+    }
+
+    private string RecordFormalsToTla(List<Formal> formals) {
+        return Printer.FormalListToString(formals);
     }
 
     public void DeclareFunction(Function f, ConcreteSyntaxTree wr) {
@@ -66,8 +81,13 @@ public class TLACompiler : Compiler {
         // Console.WriteLine("                                Result type: {0}", f.ResultType.ToString());
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(f.Body));
         if (f.ResultType == Type.Bool) {
-            wr.Write("{0} == {1}", f.Name, ExprToTla(f.Body));
-            wr.WriteLine();
+            if (String.Equals(f.Name, InitPredicate)) {
+                wr.WriteLine("{0} == s \\in {1} /\\ {2}", f.Name, SystemState, ExprToTla(f.Body));
+                wr.WriteLine();
+            } else {
+                wr.WriteLine("{0} == {1}", f.Name, ExprToTla(f.Body));
+                wr.WriteLine();
+            }
         } else {
             throw new NotImplementedException();
         }
@@ -79,7 +99,7 @@ public class TLACompiler : Compiler {
 
     /* This is my version of Compiler.TrExpr */
     private string ExprToTla(Expression expr) {
-        Console.WriteLine("                        ExprToTla on {0} : {1}", expr, Printer.ExprToString(expr));
+        // Console.WriteLine("                        ExprToTla on {0} : {1}", expr, Printer.ExprToString(expr));
         Contract.Requires(expr != null);
         if (expr is LiteralExpr le) {
             return LiteralExprToTla(le, le.tok, le.Type);  
@@ -124,9 +144,16 @@ public class TLACompiler : Compiler {
         } else {
             var arguments = new List<string>();
             foreach (var arg in e.Args) {
-                arguments.Add(ExprToTla(arg));
+                // Remove s and s' from the arguments list
+                if (!(arg is NameSegment && (String.Equals(((NameSegment)arg).Name, CurrentStateVar) || String.Equals(((NameSegment)arg).Name, NextStateVar)))) {
+                    arguments.Add(ExprToTla(arg));
+                }
             }
-            return String.Format("{0}({1})", e.Name, String.Join(", ", arguments));
+            if (arguments.Count == 0) {
+                return String.Format("{0}", e.Name);
+            } else {
+                return String.Format("{0}({1})", e.Name, String.Join(", ", arguments));
+            }
         }
     }
 
@@ -186,13 +213,13 @@ public class TLACompiler : Compiler {
     **************************************************************************************/
 
     protected override void DeclareSubsetType(SubsetTypeDecl sst, ConcreteSyntaxTree wr) {
-        Console.WriteLine("      TONY: Dealing with SubsetTypeDecl");
-        Console.WriteLine("                                Name: {0}", sst.Name);
-        Console.WriteLine("                                Var: {0}", Printer.BoundVarToString(sst.Var));
-        Console.WriteLine("                                Constraint: {0}", Printer.ExprToString(sst.Constraint));
-        Console.WriteLine("                                WitnessKind: {0}", Printer.WitnessKindToString(sst.WitnessKind));
+        Console.WriteLine("            TONY: Dealing with SubsetTypeDecl");
+        Console.WriteLine("                Name: {0}", sst.Name);
+        Console.WriteLine("                Var: {0}", Printer.BoundVarToString(sst.Var));
+        Console.WriteLine("                Constraint: {0}", Printer.ExprToString(sst.Constraint));
+        Console.WriteLine("                WitnessKind: {0}", Printer.WitnessKindToString(sst.WitnessKind));
         if (sst.WitnessKind == SubsetTypeDecl.WKind.Compiled || sst.WitnessKind == SubsetTypeDecl.WKind.Ghost) {
-            Console.WriteLine("                                Witness: {0}", Printer.ExprToString(sst.Witness));
+            Console.WriteLine("                Witness: {0}", Printer.ExprToString(sst.Witness));
         }
         throw new NotImplementedException();
         // var cw = (ClassWriter)CreateClass(IdProtect(sst.EnclosingModuleDefinition.CompileName), IdName(sst), sst, wr);
