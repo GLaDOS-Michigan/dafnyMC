@@ -81,17 +81,77 @@ public class TLACompiler : Compiler {
     private string ExprToTla(Expression expr) {
         Console.WriteLine("                        ExprToTla on {0} : {1}", expr, Printer.ExprToString(expr));
         Contract.Requires(expr != null);
-        if (expr is LiteralExpr) {
-            throw new NotImplementedException();
+        if (expr is LiteralExpr le) {
+            return LiteralExprToTla(le, le.tok, le.Type);  
+        } else if (expr is IdentifierExpr ie) {
+            return IdentifierExprToTla(ie.Var, ie.Name, ie.tok, ie.Type);  
+        } else if (expr is FunctionCallExpr fce) {
+            return FunctionCallToTla(fce, fce.tok, fce.Type);
+        } else if (expr is UnaryExpr ue) {
+            return UnaryExprToTla(ue, ue.tok, ue.Type);
         } else if (expr is BinaryExpr be) {
             return BinOpToTla(be.ResolvedOp, be.E0, be.E1, be.tok, be.Type);
         } else if (expr is ConcreteSyntaxExpression cse) {
             return ExprToTla(cse.ResolvedExpression);
         } else if (expr is MemberSelectExpr mse) {
-            // TODO
-            return "";
+            return MemberSelectExprToTla(mse.Obj, mse.MemberName, mse.Member, mse.tok, mse.Type);
         } else {
             return UnsupportedExpr(expr);
+        }
+    }
+
+    private string LiteralExprToTla(LiteralExpr e, Bpl.IToken tok, Type resultType) {
+
+        if (e.Value is bool) {
+            return (bool)e.Value ? "true" : "false";
+        } else if (e is StringLiteralExpr) {
+            var str = (StringLiteralExpr)e;
+            return String.Format("{0}", str);
+        } else if (e.Value is BigInteger i) {
+            return i.ToString();
+        } else {
+            return UnsupportedExpr(e);
+        }
+    }
+
+    private string IdentifierExprToTla(IVariable var, string name, Bpl.IToken tok, Type resultType){   
+        return var.Name;
+    }
+
+    private string FunctionCallToTla(FunctionCallExpr e, Bpl.IToken tok, Type resultType){   
+        if (e.Function is SpecialFunction) {
+            return UnsupportedExpr(e);
+        } else {
+            var arguments = new List<string>();
+            foreach (var arg in e.Args) {
+                arguments.Add(ExprToTla(arg));
+            }
+            return String.Format("{0}({1})", e.Name, String.Join(", ", arguments));
+        }
+    }
+
+    private string MemberSelectExprToTla(Expression obj, string memberName, MemberDecl member, 
+        Bpl.IToken tok, Type resultType)
+    {
+        if (member is Field) {
+            return String.Format("{0}.{1}", ExprToTla(obj), member.Name);
+        } else {
+            throw new NotSupportedException(String.Format("TLA compiler does not support non-field members'{0}'", member));
+        }
+    }
+
+    private string UnaryExprToTla(UnaryExpr e, Bpl.IToken tok, Type resultType) {
+        if (e is UnaryOpExpr uo) {
+            switch (uo.Op) {
+                case UnaryOpExpr.Opcode.Not:
+                    return String.Format("~{0}", ExprToTla(uo.E));
+                case UnaryOpExpr.Opcode.Cardinality:
+                    return String.Format("|{0}|", ExprToTla(uo.E));
+                default:
+                    return UnsupportedExpr(e);
+            }
+        } else {
+            return UnsupportedExpr(e);
         }
     }
 
@@ -103,8 +163,18 @@ public class TLACompiler : Compiler {
                 opString = "=="; break;
             case BinaryExpr.ResolvedOpcode.And:
                 opString = "/\\"; break;
+            case BinaryExpr.ResolvedOpcode.Or:
+                opString = "\\/"; break;
             case BinaryExpr.ResolvedOpcode.EqCommon:
                 opString = "="; break;
+            case BinaryExpr.ResolvedOpcode.Le:
+                opString = "<="; break;
+            case BinaryExpr.ResolvedOpcode.Add:
+                opString = "+"; break;
+            case BinaryExpr.ResolvedOpcode.Sub:
+                opString = "-"; break;
+            case BinaryExpr.ResolvedOpcode.Mul:
+                opString = "*"; break;
             default:
                 throw new NotSupportedException(String.Format("TLA compiler does not support binary operation '{0}'", op));
         }
