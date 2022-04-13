@@ -82,12 +82,13 @@ public class TLACompiler : Compiler {
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(f.Body));
         if (f.ResultType == Type.Bool) {
             if (String.Equals(f.Name, InitPredicate)) {
-                wr.WriteLine("{0} == s \\in {1} /\\ {2}", f.Name, SystemState, ExprToTla(f.Body));
-                wr.WriteLine();
+                wr.WriteLine("{0} == s \\in {1} /\\ ({2})", f.Name, SystemState, ExprToTla(f.Body));
+            } else if (String.Equals(f.Name, NextPredicate)) {
+                wr.WriteLine("{0} == s' \\in {1} /\\ ({2})", f.Name, SystemState, ExprToTla(f.Body));
             } else {
                 wr.WriteLine("{0} == {1}", f.Name, ExprToTla(f.Body));
-                wr.WriteLine();
             }
+            wr.WriteLine();
         } else {
             throw new NotImplementedException();
         }
