@@ -130,7 +130,7 @@ public class TLACompiler : Compiler {
     }
 
     private string UnsupportedExpr(Expression expr) {
-        throw new NotSupportedException(String.Format("TLA compiler does not support expression {0}: '{1}'",    expr, Printer.ExprToString(expr)));
+        Console.WriteLine(); throw new NotSupportedException(String.Format("TLA compiler does not support expression {0}: '{1}'",    expr, Printer.ExprToString(expr)));
     }
 
     /* This is my version of Compiler.TrExpr */
@@ -159,6 +159,8 @@ public class TLACompiler : Compiler {
             return String.Format("{{{0}}}", String.Join(", ", exprs));
         } else if (expr is LetExpr li) {
             return LetExprToTla(li, li.tok, li.Type);
+        } else if (expr is MatchExpr me) {
+            return MatchExprToTla(me, me.tok, me.Type);
         } else {
             return UnsupportedExpr(expr);
         }
@@ -204,7 +206,7 @@ public class TLACompiler : Compiler {
         if (member is Field) {
             return String.Format("{0}.{1}", ExprToTla(obj), member.Name);
         } else {
-            throw new NotSupportedException(String.Format("TLA compiler does not support non-field members'{0}'", member));
+            Console.WriteLine(); throw new NotSupportedException(String.Format("TLA compiler does not support non-field members'{0}'", member));
         }
     }
 
@@ -218,6 +220,24 @@ public class TLACompiler : Compiler {
         }
         // Using (**) as visual seperator
         var res = String.Format("LET {0} IN {1}", String.Join(" (**) ", letInDefs), ExprToTla(expr.Body));
+        return res;
+    }
+
+    private string MatchExprToTla(MatchExpr expr, Bpl.IToken tok, Type resultType) {
+        var source = ExprToTla(expr.Source);
+        var cases = new List<string>();
+        for (var i = 0; i < expr.Cases.Count; i++) {
+            var c = expr.Cases[i];
+            var lhs = c.Ctor.Name;
+            var rhs = ExprToTla(c.Body);
+            if (i == 0) {
+                cases.Add(String.Format("CASE {0} -> {1}", lhs, rhs));
+            } else {
+                cases.Add(String.Format("[] {0} -> {1}", lhs, rhs));
+            }
+        }
+        cases.Add("[] OTHER -> FALSE");
+        var res = String.Join(" ", cases);
         return res;
     }
 
@@ -260,7 +280,10 @@ public class TLACompiler : Compiler {
                 opString = "*"; break;
             case BinaryExpr.ResolvedOpcode.SetEq:
                 opString = "="; break;
+            case BinaryExpr.ResolvedOpcode.InSet:
+                opString = "\\in"; break;
             default:
+                Console.WriteLine(); 
                 throw new NotSupportedException(String.Format("TLA compiler does not support binary operation '{0}' in '{1} ({0}) {2}'", op, Printer.ExprToString(e0), Printer.ExprToString(e1)));
         }
         return String.Format("{0} {1} {2}", ExprToTla(e0), opString, ExprToTla(e1));
