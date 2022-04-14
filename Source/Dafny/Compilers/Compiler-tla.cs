@@ -151,6 +151,12 @@ public class TLACompiler : Compiler {
             return ExprToTla(cse.ResolvedExpression);
         } else if (expr is MemberSelectExpr mse) {
             return MemberSelectExprToTla(mse.Obj, mse.MemberName, mse.Member, mse.tok, mse.Type);
+        } else if (expr is SetDisplayExpr sd) {
+            var exprs = new List<string>();
+            foreach (var e in sd.Elements) {
+                exprs.Add(ExprToTla(e));
+            }
+            return String.Format("{{{0}}}", String.Join(", ", exprs));
         } else {
             return UnsupportedExpr(expr);
         }
@@ -235,8 +241,10 @@ public class TLACompiler : Compiler {
                 opString = "-"; break;
             case BinaryExpr.ResolvedOpcode.Mul:
                 opString = "*"; break;
+            case BinaryExpr.ResolvedOpcode.SetEq:
+                opString = "="; break;
             default:
-                throw new NotSupportedException(String.Format("TLA compiler does not support binary operation '{0}'", op));
+                throw new NotSupportedException(String.Format("TLA compiler does not support binary operation '{0}' in '{1} ({0}) {2}'", op, Printer.ExprToString(e0), Printer.ExprToString(e1)));
         }
         return String.Format("{0} {1} {2}", ExprToTla(e0), opString, ExprToTla(e1));
     }
