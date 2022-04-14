@@ -1179,7 +1179,7 @@ namespace Microsoft.Dafny {
             moduleIsExtern = true;
           }
         }
-        var wr = CreateModule(m.CompileName, m.IsDefaultModule, moduleIsExtern, libraryName, wrx);
+        var wr = CreateModule(m.DafnyName, m.IsDefaultModule, moduleIsExtern, libraryName, wrx);
         var v = new CheckHasNoAssumes_Visitor(this, wr);
         foreach (TopLevelDecl d in m.TopLevelDecls) {
           bool compileIt = true;

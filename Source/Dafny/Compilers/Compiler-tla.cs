@@ -96,9 +96,9 @@ public class TLACompiler : Compiler {
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(body));
         if (resultType == Type.Bool) {
             if (String.Equals(name, InitPredicate)) {
-                wr.WriteLine("{0} == s \\in {1} /\\ ({2})", name, SystemState, ExprToTla(body));
+                wr.WriteLine("{0} == {1} \\in {2} /\\ ({3})", name, CurrentStateVar, SystemState, ExprToTla(body));
             } else if (String.Equals(name, NextPredicate)) {
-                wr.WriteLine("{0} == s' \\in {1} /\\ ({2})", name, SystemState, ExprToTla(body));
+                wr.WriteLine("{0} == {1} \\in {2} /\\ ({3})", name, NextStateVar, SystemState, ExprToTla(body));
             } else {
                 wr.WriteLine("{0} == {1}", name, ExprToTla(body));
             }
@@ -225,7 +225,7 @@ public class TLACompiler : Compiler {
     }
 
     /*************************************************************************************
-    *                                                                        Unsupported                                                                         *
+    *                                     Unsupported                                    *
     **************************************************************************************/
 
     protected override void DeclareSubsetType(SubsetTypeDecl sst, ConcreteSyntaxTree wr) {
@@ -674,9 +674,9 @@ public class TLACompiler : Compiler {
         public void Finish() { }
     }
 
-    /*****************************************************************************************
-    *                                                                 Machine Code Procedures                                                                *
-    ******************************************************************************************/
+/*****************************************************************************************
+*                               Machine Code Procedures                                  *
+******************************************************************************************/
     public override bool CompileTargetProgram(string dafnyProgramName, string targetProgramText,
         string /*?*/ callToMain, string /*?*/ targetFilename, ReadOnlyCollection<string> otherFileNames,
         bool runAfterCompile, TextWriter outputWriter, out object compilationResult) {
