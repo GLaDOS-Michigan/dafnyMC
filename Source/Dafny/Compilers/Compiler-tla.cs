@@ -26,8 +26,7 @@ public class TLACompiler : Compiler {
 
     protected override void EmitHeader(Program program, ConcreteSyntaxTree wr) {
         wr.WriteLine("---------------------------------- MODULE {0} ----------------------------------", Path.GetFileNameWithoutExtension(program.Name));
-        wr.WriteLine("\\* Dafny program {0} compiled into TLA", program.Name);
-        // ReadRuntimeSystem("DafnyRuntime.tla", wr);
+        wr.WriteLine("\\* Dafny module {0} compiled into TLA", program.Name);
         wr.WriteLine();
         wr.WriteLine("EXTENDS Integers");    // Common enough to always do this
         wr.WriteLine();
@@ -35,8 +34,7 @@ public class TLACompiler : Compiler {
         wr.WriteLine();
         // Link local type declarations to dafny type
         wr.WriteLine("int == Int");
-    
-    }
+    } 
 
     protected override void EmitFooter(Program program, ConcreteSyntaxTree wr) {
         wr.WriteLine("Spec == {0} /\\ [][{1}]_{2}", InitPredicate, NextPredicate, CurrentStateVar);
@@ -47,13 +45,28 @@ public class TLACompiler : Compiler {
 
     protected override ConcreteSyntaxTree CreateModule(string moduleName, bool isDefault, bool isExtern,
             string libraryName, ConcreteSyntaxTree wr) {
-        Console.WriteLine("        TONY: Creating module " + moduleName);
-        return wr.NewBlock($"\\* Begin Dafny module {moduleName}\n\n", open: BlockStyle.Nothing, close: BlockStyle.Nothing);
+        if (isDefault) {
+            // Fold the default module into the main module
+            return wr;
+        }
+        string pkgName = libraryName == null ? moduleName : libraryName ;
+        if (isExtern) {
+            throw new NotSupportedException();
+        } else {
+            // var filename = string.Format("{0}.tla", pkgName);
+            // var w = wr.NewFile(filename);
+
+            // TONY: Just combine everything into one TLA file for now. 
+            wr.WriteLine();
+            wr.WriteLine("(******     Dafny module {0}     *****)", moduleName);
+            wr.WriteLine();
+            return wr;
+        }
     }
 
     protected override IClassWriter CreateClass(string moduleName, string name, bool isExtern, string fullPrintName,
         List<TypeParameter> typeParameters, TopLevelDecl cls, List<Type> superClasses, IToken tok, ConcreteSyntaxTree wr) {
-        return new ClassWriter(this, null, wr);
+        return new ClassWriter(this, name, null, wr);
     }
 
     protected override IClassWriter DeclareDatatype(DatatypeDecl dt, ConcreteSyntaxTree wr) {
@@ -75,23 +88,25 @@ public class TLACompiler : Compiler {
         return Printer.FormalListToString(formals);
     }
 
-    public void DeclareFunction(Function f, ConcreteSyntaxTree wr) {
-        Console.WriteLine("                    Name: {0}", f.Name);
-        Console.WriteLine("                    Formals: ( {0} )", Printer.FormalListToString(f.Formals));            
+    protected ConcreteSyntaxTree/*?*/ FuncToTlaOperator(string name, List<TypeArgumentInstantiation> typeArgs, List<Formal> formals, Type resultType, Expression body, Bpl.IToken tok, bool isStatic, bool createBody,
+      MemberDecl member, string ownerName, ConcreteSyntaxTree wr, bool forBodyInheritance, bool lookasideBody) {
+        Console.WriteLine("                    Name: {0}", name);
+        Console.WriteLine("                    Formals: ( {0} )", Printer.FormalListToString(formals));            
         // Console.WriteLine("                                Result type: {0}", f.ResultType.ToString());
-        Console.WriteLine("                    Body: {0}", Printer.ExprToString(f.Body));
-        if (f.ResultType == Type.Bool) {
-            if (String.Equals(f.Name, InitPredicate)) {
-                wr.WriteLine("{0} == s \\in {1} /\\ ({2})", f.Name, SystemState, ExprToTla(f.Body));
-            } else if (String.Equals(f.Name, NextPredicate)) {
-                wr.WriteLine("{0} == s' \\in {1} /\\ ({2})", f.Name, SystemState, ExprToTla(f.Body));
+        Console.WriteLine("                    Body: {0}", Printer.ExprToString(body));
+        if (resultType == Type.Bool) {
+            if (String.Equals(name, InitPredicate)) {
+                wr.WriteLine("{0} == s \\in {1} /\\ ({2})", name, SystemState, ExprToTla(body));
+            } else if (String.Equals(name, NextPredicate)) {
+                wr.WriteLine("{0} == s' \\in {1} /\\ ({2})", name, SystemState, ExprToTla(body));
             } else {
-                wr.WriteLine("{0} == {1}", f.Name, ExprToTla(f.Body));
+                wr.WriteLine("{0} == {1}", name, ExprToTla(body));
             }
             wr.WriteLine();
         } else {
             throw new NotImplementedException();
         }
+        return wr;
     }
 
     private string UnsupportedExpr(Expression expr) {
@@ -580,7 +595,7 @@ public class TLACompiler : Compiler {
 
 
     /*************************************************************************************
-    *                                                                             Utils                                                                                *
+    *                                        Utils                                       *
     **************************************************************************************/
 
     private static string MangleName(string name) {
@@ -598,16 +613,19 @@ public class TLACompiler : Compiler {
         }
     }
 
-    protected class ClassWriter : IClassWriter {
+    public class ClassWriter : IClassWriter {
         public readonly TLACompiler Compiler;
+
+        public readonly string ClassName;
         public readonly ConcreteSyntaxTree InstanceMemberWriter;
         public readonly ConcreteSyntaxTree StaticMemberWriter;
         public readonly ConcreteSyntaxTree CtorBodyWriter;
 
-        public ClassWriter(TLACompiler compiler, ConcreteSyntaxTree instanceMemberWriter, ConcreteSyntaxTree/*?*/ ctorBodyWriter, ConcreteSyntaxTree/*?*/ staticMemberWriter = null) {
+        public ClassWriter(TLACompiler compiler, string className, ConcreteSyntaxTree instanceMemberWriter, ConcreteSyntaxTree/*?*/ ctorBodyWriter, ConcreteSyntaxTree/*?*/ staticMemberWriter = null) {
             Contract.Requires(compiler != null);
             Contract.Requires(instanceMemberWriter != null);
             this.Compiler = compiler;
+            this.ClassName = className;
             this.InstanceMemberWriter = instanceMemberWriter;
             this.CtorBodyWriter = ctorBodyWriter;
             this.StaticMemberWriter = staticMemberWriter ?? instanceMemberWriter;
@@ -628,7 +646,11 @@ public class TLACompiler : Compiler {
         }
 
         public ConcreteSyntaxTree /*?*/ CreateFunction(string name, List<TypeArgumentInstantiation> typeArgs, List<Formal> formals, Type resultType, Bpl.IToken tok, bool isStatic, bool createBody, MemberDecl member, bool forBodyInheritance, bool lookasideBody) {
-            return CtorBodyWriter;
+            throw new NotSupportedException();
+        }
+
+        public ConcreteSyntaxTree /*?*/ CreateFunction(string name, List<TypeArgumentInstantiation> typeArgs, List<Formal> formals, Type resultType, Expression body, Bpl.IToken tok, bool isStatic, bool createBody, MemberDecl member, bool forBodyInheritance, bool lookasideBody) {
+            return Compiler.FuncToTlaOperator(name, typeArgs, formals, resultType, body, tok, isStatic, createBody, member, ClassName, CtorBodyWriter, forBodyInheritance, lookasideBody);
         }
 
         public ConcreteSyntaxTree /*?*/ CreateGetter(string name, TopLevelDecl enclosingDecl, Type resultType, Bpl.IToken tok, bool isStatic, bool isConst, bool createBody, MemberDecl /*?*/ member, bool forBodyInheritance) {

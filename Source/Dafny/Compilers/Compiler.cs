@@ -1815,8 +1815,7 @@ namespace Microsoft.Dafny {
             // Need to compile if is TLA compiler
             if (IsTlaCompiler()) {
               if (f.Body != null) {
-                var w = classWriter.CreateFunction(IdName(f), CombineAllTypeArguments(f), f.Formals, f.ResultType, f.tok, f.IsStatic, true, f, false, false);
-                ((TLACompiler)this).DeclareFunction(f, w);
+                var w = ((TLACompiler.ClassWriter)classWriter).CreateFunction(IdName(f), CombineAllTypeArguments(f), f.Formals, f.ResultType, f.Body, f.tok, f.IsStatic, true, f, false, false);
               }
             }
           } else if (c is TraitDecl && !f.IsStatic) {

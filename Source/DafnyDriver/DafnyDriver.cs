@@ -589,7 +589,7 @@ namespace Microsoft.Dafny {
           break;
         case DafnyOptions.CompilationTarget.TLA:
           targetExtension = "tla";
-          targetBaseDir = baseName + "-tla/src";
+          targetBaseDir = baseName + "-tla";
           break;
 
         default:
