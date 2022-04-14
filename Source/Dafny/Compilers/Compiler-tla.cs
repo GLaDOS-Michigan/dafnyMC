@@ -157,6 +157,8 @@ public class TLACompiler : Compiler {
                 exprs.Add(ExprToTla(e));
             }
             return String.Format("{{{0}}}", String.Join(", ", exprs));
+        } else if (expr is LetExpr li) {
+            return LetExprToTla(li, li.tok, li.Type);
         } else {
             return UnsupportedExpr(expr);
         }
@@ -204,6 +206,19 @@ public class TLACompiler : Compiler {
         } else {
             throw new NotSupportedException(String.Format("TLA compiler does not support non-field members'{0}'", member));
         }
+    }
+
+    private string LetExprToTla(LetExpr expr, Bpl.IToken tok, Type resultType) {
+        Contract.Assert(expr.LHSs.Count == expr.RHSs.Count);
+        var letInDefs = new List<String>();
+        for (int i = 0; i < expr.LHSs.Count; i++) {
+            var name = expr.LHSs[i].Var.Name;
+            var def = ExprToTla(expr.RHSs[i]);
+            letInDefs.Add(String.Format("{0} == {1}", name, def));
+        }
+        // Using (**) as visual seperator
+        var res = String.Format("LET {0} IN {1}", String.Join(" (**) ", letInDefs), ExprToTla(expr.Body));
+        return res;
     }
 
     private string UnaryExprToTla(UnaryExpr e, Bpl.IToken tok, Type resultType) {
