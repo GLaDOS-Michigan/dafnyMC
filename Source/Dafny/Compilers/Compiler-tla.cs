@@ -227,6 +227,8 @@ public class TLACompiler : Compiler {
         switch (op) {
             case BinaryExpr.ResolvedOpcode.Iff:
                 opString = "=="; break;
+            case BinaryExpr.ResolvedOpcode.Imp:
+                opString = "=>"; break;
             case BinaryExpr.ResolvedOpcode.And:
                 opString = "/\\"; break;
             case BinaryExpr.ResolvedOpcode.Or:
