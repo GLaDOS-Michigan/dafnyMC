@@ -18,11 +18,11 @@ public class TLACompiler : Compiler {
     protected override string StmtTerminator { get => ""; }
 
     protected string SystemState = "State";
-    protected string InitPredicate = "Init";
-    protected string NextPredicate = "Next";
-
-    protected string CurrentStateVar = "s";
-    protected string NextStateVar = "s'";
+    protected string InitPred = "Init";
+    protected string NextPred = "Next";
+    protected const string TLA_INIT = "tla_Init";
+    protected const string TLA_NEXT = "tla_Next";
+    protected const string TLA_STATE = "tla_s";
 
     protected override void EmitHeader(Program program, ConcreteSyntaxTree wr) {
         wr.WriteLine("---------------------------------- MODULE {0} ----------------------------------", Path.GetFileNameWithoutExtension(program.Name));
@@ -30,14 +30,18 @@ public class TLACompiler : Compiler {
         wr.WriteLine();
         wr.WriteLine("EXTENDS Integers");    // Common enough to always do this
         wr.WriteLine();
-        wr.WriteLine("VARIABLE {0}", CurrentStateVar); 
+        wr.WriteLine("VARIABLE {0}", TLA_STATE); 
         wr.WriteLine();
         // Link local type declarations to dafny type
         wr.WriteLine("int == Int");
     } 
 
     protected override void EmitFooter(Program program, ConcreteSyntaxTree wr) {
-        wr.WriteLine("Spec == {0} /\\ [][{1}]_{2}", InitPredicate, NextPredicate, CurrentStateVar);
+        wr.WriteLine("{0} == {1} \\in {2} /\\ {3}({4})", TLA_INIT, TLA_STATE, SystemState, InitPred, TLA_STATE);
+        wr.WriteLine("{0} == {1}' \\in {2} /\\ {3}({4}, {5}')", TLA_NEXT, TLA_STATE, SystemState, NextPred, TLA_STATE, TLA_STATE);
+        wr.WriteLine("tla_Spec == {0} /\\ [][{1}]_({2})", TLA_INIT, TLA_NEXT, TLA_STATE);
+        wr.WriteLine();
+        wr.WriteLine("tla_Safety == FALSE \\* User input");
         wr.WriteLine();
         wr.WriteLine("==========================================================================================");
         wr.WriteLine();
@@ -95,13 +99,11 @@ public class TLACompiler : Compiler {
         // Console.WriteLine("                                Result type: {0}", f.ResultType.ToString());
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(body));
         if (resultType == Type.Bool) {
-            if (String.Equals(name, InitPredicate)) {
-                wr.WriteLine("{0} == {1} \\in {2} /\\ ({3})", name, CurrentStateVar, SystemState, ExprToTla(body));
-            } else if (String.Equals(name, NextPredicate)) {
-                wr.WriteLine("{0} == {1} \\in {2} /\\ ({3})", name, NextStateVar, SystemState, ExprToTla(body));
-            } else {
-                wr.WriteLine("{0} == {1}", name, ExprToTla(body));
+            var arguments = new List<string>();
+            foreach (var fm in formals) {
+                arguments.Add(fm.CompileName);
             }
+            wr.WriteLine("{0}({1}) == {2}", name, String.Join(", ", arguments), ExprToTla(body));
             wr.WriteLine();
         } else {
             throw new NotImplementedException();
@@ -151,7 +153,7 @@ public class TLACompiler : Compiler {
     }
 
     private string IdentifierExprToTla(IVariable var, string name, Bpl.IToken tok, Type resultType){   
-        return var.Name;
+        return var.CompileName;
     }
 
     private string FunctionCallToTla(FunctionCallExpr e, Bpl.IToken tok, Type resultType){   
@@ -160,10 +162,7 @@ public class TLACompiler : Compiler {
         } else {
             var arguments = new List<string>();
             foreach (var arg in e.Args) {
-                // Remove s and s' from the arguments list
-                if (!(arg is NameSegment && (String.Equals(((NameSegment)arg).Name, CurrentStateVar) || String.Equals(((NameSegment)arg).Name, NextStateVar)))) {
-                    arguments.Add(ExprToTla(arg));
-                }
+                arguments.Add(ExprToTla(arg));
             }
             if (arguments.Count == 0) {
                 return String.Format("{0}", e.Name);
