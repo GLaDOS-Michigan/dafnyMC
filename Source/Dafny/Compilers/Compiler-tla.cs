@@ -75,21 +75,39 @@ public class TLACompiler : Compiler {
 
     protected override IClassWriter DeclareDatatype(DatatypeDecl dt, ConcreteSyntaxTree wr) {
         Console.WriteLine("            TONY: Dealing with DatatypeDecl");
-        Console.WriteLine("                Name: {0}", dt.Name);
         if (dt.IsRecordType) {
-            if (dt.Ctors.Count > 1) {
-                throw new NotImplementedException();
-            }
-            var ctor = dt.Ctors[0];
-            wr.WriteLine("{0} == [{1}]", dt.Name, RecordFormalsToTla(ctor.Formals));
+            // IsRecordType is true implies that Ctors.Count == 1 and dt is IndDatatypeDecl
+            var ctor = dt.Ctors[0]; 
+            Console.WriteLine("                {0} == {1}", dt.Name, DefineRecordType(ctor.Formals));
+            wr.WriteLine("{0} == {1}", dt.Name, DefineRecordType(ctor.Formals));
+        } else if (dt is IndDatatypeDecl) {
+            // dt has multiple constructors
+            Contract.Assert(dt.Ctors.Count > 1);
+            Console.WriteLine("                {0} == {1}", dt.Name, DefineUnionType(dt.Ctors));
+            wr.WriteLine("{0} == {1}", dt.Name, DefineUnionType(dt.Ctors));
         } else {
-            throw new NotImplementedException();
+            throw new NotImplementedException(String.Format("DeclareDatatype {0} '{1}' is not supported", dt, dt.WhatKind));
         }
         return null;
     }
 
-    private string RecordFormalsToTla(List<Formal> formals) {
-        return Printer.FormalListToString(formals);
+    private string DefineRecordType(List<Formal> fields) {
+        return String.Format("[{0}]", Printer.FormalListToString(fields));
+    }
+
+    private string DefineUnionType(List<DatatypeCtor> ctors) {
+        var types = new List<string>();
+        foreach (DatatypeCtor ctor in ctors) {
+            var type = "";
+            if (ctor.Formals.Count > 0) {
+                var formals = Printer.FormalListToString(ctor.Formals);
+                type = String.Format("[type : {{\"{0}\"}}, {1}]", ctor.Name, formals);
+            } else {
+                type = String.Format("[type : {{\"{0}\"}}]", ctor.Name);
+            }
+            types.Add(type);
+        }
+        return String.Join(" \\union ", types);
     }
 
     protected ConcreteSyntaxTree/*?*/ FuncToTlaOperator(string name, List<TypeArgumentInstantiation> typeArgs, List<Formal> formals, Type resultType, Expression body, Bpl.IToken tok, bool isStatic, bool createBody,
