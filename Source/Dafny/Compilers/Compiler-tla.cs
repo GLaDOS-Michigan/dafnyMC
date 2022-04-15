@@ -148,6 +148,9 @@ public class TLACompiler : Compiler {
                 return ExprToTla(((ConcreteSyntaxExpression)expr).ResolvedExpression);
             case MemberSelectExpr:
                 return MemberSelectExprToTla((MemberSelectExpr)expr);
+            case SeqSelectExpr:
+                // TODO
+                return "TODOSeqSelectExpr";
             case UnaryExpr:
                 return UnaryExprToTla((UnaryExpr)expr);
             case BinaryExpr:
@@ -158,6 +161,8 @@ public class TLACompiler : Compiler {
                 return LetExprToTla((LetExpr)expr);
             case MatchExpr:
                 return MatchExprToTla((MatchExpr)expr);
+            case ForallExpr:
+                return ForallExprToTla((ForallExpr)expr);
             default:
                 return UnsupportedExpr(expr);
         }
@@ -239,6 +244,17 @@ public class TLACompiler : Compiler {
         return res;
     }
 
+    private string ForallExprToTla(ForallExpr expr) {
+        var term = ExprToTla(expr.Term);
+        var quantifiedVars = new List<string>();
+        var range = ExprToTla(expr.Range);
+        foreach (var bv in expr.BoundVars) {
+            quantifiedVars.Add(bv.CompileName);
+        } 
+        var res = String.Format("\\A {0}: {1} => {2}", String.Join(",", quantifiedVars), range, term);
+        return res;
+    }
+
     private string UnaryExprToTla(UnaryExpr e) {
         if (e is UnaryOpExpr uo) {
             switch (uo.Op) {
@@ -271,6 +287,8 @@ public class TLACompiler : Compiler {
                 opString = "="; break;
             case BinaryExpr.ResolvedOpcode.Le:
                 opString = "<="; break;
+            case BinaryExpr.ResolvedOpcode.Lt:
+                opString = "<"; break;
             case BinaryExpr.ResolvedOpcode.Add:
                 opString = "+"; break;
             case BinaryExpr.ResolvedOpcode.Sub:
