@@ -137,36 +137,33 @@ public class TLACompiler : Compiler {
     private string ExprToTla(Expression expr) {
         // Console.WriteLine("                        ExprToTla on {0} : {1}", expr, Printer.ExprToString(expr));
         Contract.Requires(expr != null);
-        if (expr is LiteralExpr le) {
-            return LiteralExprToTla(le, le.tok, le.Type);  
-        } else if (expr is IdentifierExpr ie) {
-            return IdentifierExprToTla(ie.Var, ie.Name, ie.tok, ie.Type);  
-        } else if (expr is FunctionCallExpr fce) {
-            return FunctionCallToTla(fce, fce.tok, fce.Type);
-        } else if (expr is UnaryExpr ue) {
-            return UnaryExprToTla(ue, ue.tok, ue.Type);
-        } else if (expr is BinaryExpr be) {
-            return BinOpToTla(be.ResolvedOp, be.E0, be.E1, be.tok, be.Type);
-        } else if (expr is ConcreteSyntaxExpression cse) {
-            return ExprToTla(cse.ResolvedExpression);
-        } else if (expr is MemberSelectExpr mse) {
-            return MemberSelectExprToTla(mse.Obj, mse.MemberName, mse.Member, mse.tok, mse.Type);
-        } else if (expr is SetDisplayExpr sd) {
-            var exprs = new List<string>();
-            foreach (var e in sd.Elements) {
-                exprs.Add(ExprToTla(e));
-            }
-            return String.Format("{{{0}}}", String.Join(", ", exprs));
-        } else if (expr is LetExpr li) {
-            return LetExprToTla(li, li.tok, li.Type);
-        } else if (expr is MatchExpr me) {
-            return MatchExprToTla(me, me.tok, me.Type);
-        } else {
-            return UnsupportedExpr(expr);
+        switch (expr) {
+            case LiteralExpr:
+                return LiteralExprToTla((LiteralExpr)expr);  
+            case IdentifierExpr:
+                return IdentifierExprToTla((IdentifierExpr)expr);  
+            case FunctionCallExpr:
+                return FunctionCallToTla((FunctionCallExpr)expr);
+            case ConcreteSyntaxExpression:
+                return ExprToTla(((ConcreteSyntaxExpression)expr).ResolvedExpression);
+            case MemberSelectExpr:
+                return MemberSelectExprToTla((MemberSelectExpr)expr);
+            case UnaryExpr:
+                return UnaryExprToTla((UnaryExpr)expr);
+            case BinaryExpr:
+                return BinOpToTla((BinaryExpr)expr);
+            case SetDisplayExpr:
+                return SetDisplayExprToTla((SetDisplayExpr)expr);
+            case LetExpr:
+                return LetExprToTla((LetExpr)expr);
+            case MatchExpr:
+                return MatchExprToTla((MatchExpr)expr);
+            default:
+                return UnsupportedExpr(expr);
         }
     }
 
-    private string LiteralExprToTla(LiteralExpr e, Bpl.IToken tok, Type resultType) {
+    private string LiteralExprToTla(LiteralExpr e) {
 
         if (e.Value is bool) {
             return (bool)e.Value ? "true" : "false";
@@ -180,11 +177,11 @@ public class TLACompiler : Compiler {
         }
     }
 
-    private string IdentifierExprToTla(IVariable var, string name, Bpl.IToken tok, Type resultType){   
-        return var.CompileName;
+    private string IdentifierExprToTla(IdentifierExpr expr){   
+        return expr.Var.CompileName;
     }
 
-    private string FunctionCallToTla(FunctionCallExpr e, Bpl.IToken tok, Type resultType){   
+    private string FunctionCallToTla(FunctionCallExpr e){   
         if (e.Function is SpecialFunction) {
             return UnsupportedExpr(e);
         } else {
@@ -200,9 +197,10 @@ public class TLACompiler : Compiler {
         }
     }
 
-    private string MemberSelectExprToTla(Expression obj, string memberName, MemberDecl member, 
-        Bpl.IToken tok, Type resultType)
-    {
+    private string MemberSelectExprToTla(MemberSelectExpr expr) {
+        var obj = expr.Obj;
+        var memberName = expr.MemberName;
+        var member = expr.Member;
         if (member is Field) {
             return String.Format("{0}.{1}", ExprToTla(obj), member.Name);
         } else {
@@ -210,7 +208,7 @@ public class TLACompiler : Compiler {
         }
     }
 
-    private string LetExprToTla(LetExpr expr, Bpl.IToken tok, Type resultType) {
+    private string LetExprToTla(LetExpr expr) {
         Contract.Assert(expr.LHSs.Count == expr.RHSs.Count);
         var letInDefs = new List<String>();
         for (int i = 0; i < expr.LHSs.Count; i++) {
@@ -223,7 +221,7 @@ public class TLACompiler : Compiler {
         return res;
     }
 
-    private string MatchExprToTla(MatchExpr expr, Bpl.IToken tok, Type resultType) {
+    private string MatchExprToTla(MatchExpr expr) {
         var source = ExprToTla(expr.Source);
         var cases = new List<string>();
         for (var i = 0; i < expr.Cases.Count; i++) {
@@ -241,7 +239,7 @@ public class TLACompiler : Compiler {
         return res;
     }
 
-    private string UnaryExprToTla(UnaryExpr e, Bpl.IToken tok, Type resultType) {
+    private string UnaryExprToTla(UnaryExpr e) {
         if (e is UnaryOpExpr uo) {
             switch (uo.Op) {
                 case UnaryOpExpr.Opcode.Not:
@@ -256,8 +254,9 @@ public class TLACompiler : Compiler {
         }
     }
 
-    private string BinOpToTla(BinaryExpr.ResolvedOpcode op,
-        Expression e0, Expression e1, Bpl.IToken tok, Type resultType) {
+    private string BinOpToTla(BinaryExpr expr) {
+        var op = expr.ResolvedOp;
+        Expression e0 = expr.E0, e1 = expr.E1;
         var opString = "dummy opString";
         switch (op) {
             case BinaryExpr.ResolvedOpcode.Iff:
@@ -290,6 +289,15 @@ public class TLACompiler : Compiler {
         }
         return String.Format("{0} {1} {2}", ExprToTla(e0), opString, ExprToTla(e1));
     }
+
+    private string SetDisplayExprToTla(SetDisplayExpr expr) {
+        var exprs = new List<string>();
+        foreach (var e in expr.Elements) {
+            exprs.Add(ExprToTla(e));
+        }
+        return String.Format("{{{0}}}", String.Join(", ", exprs));
+    }
+
 
     /*************************************************************************************
     *                                     Unsupported                                    *
