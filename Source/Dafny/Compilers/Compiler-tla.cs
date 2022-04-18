@@ -78,8 +78,10 @@ public class TLACompiler : Compiler {
         if (dt.IsRecordType) {
             // IsRecordType is true implies that Ctors.Count == 1 and dt is IndDatatypeDecl
             var ctor = dt.Ctors[0]; 
-            Console.WriteLine("                {0} == {1}", dt.Name, DefineRecordType(ctor.Formals));
-            wr.WriteLine("{0} == {1}", dt.Name, DefineRecordType(ctor.Formals));
+           
+            var record = DefineRecordType(ctor.Name, ctor.Formals);
+            Console.WriteLine("                {0} == {1}", dt.Name, record);
+            wr.WriteLine("{0} == {1}", dt.Name, record);
         } else if (dt is IndDatatypeDecl) {
             // dt has multiple constructors
             Contract.Assert(dt.Ctors.Count > 1);
@@ -91,8 +93,8 @@ public class TLACompiler : Compiler {
         return null;
     }
 
-    private string DefineRecordType(List<Formal> fields) {
-        return String.Format("[{0}]", Printer.FormalListToString(fields));
+    private string DefineRecordType(string name, List<Formal> fields) {
+        return String.Format("[type : {{\"{0}\"}}, {1}]", name, Printer.FormalListToString(fields));
     }
 
     private string DefineUnionType(List<DatatypeCtor> ctors) {
