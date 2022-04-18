@@ -357,6 +357,8 @@ public class TLACompiler : Compiler {
                 opString = "\\in"; break;
             case BinaryExpr.ResolvedOpcode.NotInSet:
                 opString = "\\notin"; break;
+            case BinaryExpr.ResolvedOpcode.SeqEq:
+                opString = "="; break;
             case BinaryExpr.ResolvedOpcode.InSeq:
                 opString = "\\in"; break;
             case BinaryExpr.ResolvedOpcode.Union:
