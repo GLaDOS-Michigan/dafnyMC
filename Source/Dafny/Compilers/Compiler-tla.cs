@@ -274,7 +274,10 @@ public class TLACompiler : Compiler {
     }
 
     private string ITEExprToTla(ITEExpr expr) {
-        return UnsupportedExpr(expr);
+        var test = ExprToTla(expr.Test);
+        var then = ExprToTla(expr.Thn);
+        var els = ExprToTla(expr.Els);
+        return String.Format("IF {0} THEN {1} ELSE {2}", test, then, els);
     }
 
     private string UnaryExprToTla(UnaryExpr e) {
@@ -311,6 +314,8 @@ public class TLACompiler : Compiler {
                 opString = "<="; break;
             case BinaryExpr.ResolvedOpcode.Lt:
                 opString = "<"; break;
+            case BinaryExpr.ResolvedOpcode.Gt:
+                opString = ">"; break;
             case BinaryExpr.ResolvedOpcode.Add:
                 opString = "+"; break;
             case BinaryExpr.ResolvedOpcode.Sub:
