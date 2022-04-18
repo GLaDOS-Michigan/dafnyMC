@@ -150,6 +150,8 @@ public class TLACompiler : Compiler {
                 return MemberSelectExprToTla((MemberSelectExpr)expr);
             case SeqSelectExpr:
                 return SeqSelectExprToTla((SeqSelectExpr)expr);
+            case SeqUpdateExpr:
+                return SeqUpdateExprToTla((SeqUpdateExpr)expr);
             case DatatypeValue:
                 return DatatypeValueToTla((DatatypeValue)expr);
             case UnaryExpr:
@@ -158,6 +160,8 @@ public class TLACompiler : Compiler {
                 return BinOpToTla((BinaryExpr)expr);
             case SetDisplayExpr:
                 return SetDisplayExprToTla((SetDisplayExpr)expr);
+            case MapDisplayExpr:
+                return MapDisplayExprToTla((MapDisplayExpr)expr);
             case LetExpr:
                 return LetExprToTla((LetExpr)expr);
             case MatchExpr:
@@ -223,6 +227,13 @@ public class TLACompiler : Compiler {
             return UnsupportedExpr(expr);
         }
         return String.Format("{0}[{1}]", ExprToTla(expr.Seq), expr.E0);
+    }
+
+    private string SeqUpdateExprToTla(SeqUpdateExpr expr) {
+        var seq = ExprToTla(expr.Seq);
+        var index = ExprToTla(expr.Index);
+        var val = ExprToTla(expr.Value);
+        return String.Format("[{0} EXCEPT![{1}] = {2}]", seq, index, val);
     }
 
     private string DatatypeValueToTla(DatatypeValue expr) {
@@ -335,12 +346,18 @@ public class TLACompiler : Compiler {
                 opString = "="; break;
             case BinaryExpr.ResolvedOpcode.InSet:
                 opString = "\\in"; break;
+            case BinaryExpr.ResolvedOpcode.NotInSet:
+                opString = "\\notin"; break;
             case BinaryExpr.ResolvedOpcode.InSeq:
                 opString = "\\in"; break;
             case BinaryExpr.ResolvedOpcode.Union:
                 opString = "\\union"; break;
             case BinaryExpr.ResolvedOpcode.MapEq:
                 opString = "="; break;
+            case BinaryExpr.ResolvedOpcode.InMap:
+                opString = "\\in"; break;
+            case BinaryExpr.ResolvedOpcode.NotInMap:
+                opString = "\\notin"; break;
             default:
                 Console.WriteLine(); 
                 throw new NotSupportedException(String.Format("TLA compiler does not support binary operation '{0}' in '{1} ({0}) {2}'", op, Printer.ExprToString(e0), Printer.ExprToString(e1)));
@@ -354,6 +371,14 @@ public class TLACompiler : Compiler {
             exprs.Add(ExprToTla(e));
         }
         return String.Format("{{{0}}}", String.Join(", ", exprs));
+    }
+
+    private string MapDisplayExprToTla(MapDisplayExpr expr) {
+        var items = new List<string>();
+        foreach (var mapping in expr.Elements) {
+            items.Add(String.Format("{0} |-> {1}", mapping.A, mapping.B));
+        }
+        return String.Format("[{0}]", String.Join(", ", items));
     }
 
 
