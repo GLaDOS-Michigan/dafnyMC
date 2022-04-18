@@ -34,6 +34,7 @@ public class TLACompiler : Compiler {
         wr.WriteLine();
         // Link local type declarations to dafny type
         wr.WriteLine("int == Int");
+        wr.WriteLine("nat == Nat");
     } 
 
     protected override void EmitFooter(Program program, ConcreteSyntaxTree wr) {
@@ -91,6 +92,13 @@ public class TLACompiler : Compiler {
             throw new NotImplementedException(String.Format("DeclareDatatype {0} '{1}' is not supported", dt, dt.WhatKind));
         }
         return null;
+    }
+
+    public void DeclareTypeSynonym(TypeSynonymDecl dt, ConcreteSyntaxTree wr) {
+        Console.WriteLine("            TONY: Dealing with TypeSynonymDecl");
+        var res = String.Format("{0} == {1}", dt.Name, dt.Rhs.ToString());
+        Console.WriteLine("                {0}", res);
+        wr.WriteLine(res);
     }
 
     private string DefineRecordType(string name, List<Formal> fields) {

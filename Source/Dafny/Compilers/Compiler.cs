@@ -1210,7 +1210,10 @@ namespace Microsoft.Dafny {
               DeclareSubsetType(sst, wr);
               v.Visit(sst);
             } else {
-              Console.WriteLine("          TONY: Ignore");
+              if (IsTlaCompiler()) {
+                var sd = (TypeSynonymDecl) d;
+                ((TLACompiler) this).DeclareTypeSynonym(sd, wr);
+              }
               continue;
             }
           } else if (d is NewtypeDecl) {
