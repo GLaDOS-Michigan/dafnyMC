@@ -317,6 +317,8 @@ public class TLACompiler : Compiler {
                 opString = "\\/"; break;
             case BinaryExpr.ResolvedOpcode.EqCommon:
                 opString = "="; break;
+            case BinaryExpr.ResolvedOpcode.NeqCommon:
+                opString = "#"; break;
             case BinaryExpr.ResolvedOpcode.Le:
                 opString = "<="; break;
             case BinaryExpr.ResolvedOpcode.Lt:
@@ -333,8 +335,12 @@ public class TLACompiler : Compiler {
                 opString = "="; break;
             case BinaryExpr.ResolvedOpcode.InSet:
                 opString = "\\in"; break;
+            case BinaryExpr.ResolvedOpcode.InSeq:
+                opString = "\\in"; break;
             case BinaryExpr.ResolvedOpcode.Union:
                 opString = "\\union"; break;
+            case BinaryExpr.ResolvedOpcode.MapEq:
+                opString = "="; break;
             default:
                 Console.WriteLine(); 
                 throw new NotSupportedException(String.Format("TLA compiler does not support binary operation '{0}' in '{1} ({0}) {2}'", op, Printer.ExprToString(e0), Printer.ExprToString(e1)));
