@@ -79,7 +79,6 @@ public class TLACompiler : Compiler {
         if (dt.IsRecordType) {
             // IsRecordType is true implies that Ctors.Count == 1 and dt is IndDatatypeDecl
             var ctor = dt.Ctors[0]; 
-           
             var record = DefineRecordType(ctor.Name, ctor.Formals);
             Console.WriteLine("                {0} == {1}", dt.Name, record);
             wr.WriteLine("{0} == {1}", dt.Name, record);
@@ -102,21 +101,16 @@ public class TLACompiler : Compiler {
     }
 
     private string DefineRecordType(string name, List<Formal> fields) {
-        return String.Format("[type : {{\"{0}\"}}, {1}]", name, Printer.FormalListToString(fields));
+        if (fields.Count == 0) {
+            return String.Format("[type : {{\"{0}\"}}]", name);
+        } else {
+            var items = from f in fields select String.Format("{0} : {1}", f.Name, TypeToTla(f.Type));
+            return String.Format("[type : {{\"{0}\"}}, {1}]", name, String.Join(", ", items));
+        }
     }
 
     private string DefineUnionType(List<DatatypeCtor> ctors) {
-        var types = new List<string>();
-        foreach (DatatypeCtor ctor in ctors) {
-            var type = "";
-            if (ctor.Formals.Count > 0) {
-                var formals = Printer.FormalListToString(ctor.Formals);
-                type = String.Format("[type : {{\"{0}\"}}, {1}]", ctor.Name, formals);
-            } else {
-                type = String.Format("[type : {{\"{0}\"}}]", ctor.Name);
-            }
-            types.Add(type);
-        }
+        var types = from c in ctors select DefineRecordType(c.Name, c.Formals);
         return String.Join(" \\union ", types);
     }
 
@@ -141,6 +135,16 @@ public class TLACompiler : Compiler {
 
     private string UnsupportedExpr(Expression expr) {
         Console.WriteLine(); throw new NotSupportedException(String.Format("TLA compiler does not support expression {0}: '{1}'",    expr, Printer.ExprToString(expr)));
+    }
+
+    /* Converts a Dafny type into a representation in TLA */
+    private string TypeToTla(Type t) {
+        var res = t.ToString(); // default
+        if (t is SetType) {
+            var st = (SetType) t;
+            res = String.Format("SUBSET {0}", TypeToTla(st.Arg));
+        }
+        return res;
     }
 
     /* This is my version of Compiler.TrExpr */
