@@ -150,6 +150,8 @@ public class TLACompiler : Compiler {
                 return MemberSelectExprToTla((MemberSelectExpr)expr);
             case SeqSelectExpr:
                 return SeqSelectExprToTla((SeqSelectExpr)expr);
+            case DatatypeValue:
+                return DatatypeValueToTla((DatatypeValue)expr);
             case UnaryExpr:
                 return UnaryExprToTla((UnaryExpr)expr);
             case BinaryExpr:
@@ -162,6 +164,8 @@ public class TLACompiler : Compiler {
                 return MatchExprToTla((MatchExpr)expr);
             case ForallExpr:
                 return ForallExprToTla((ForallExpr)expr);
+            case ITEExpr:
+                return ITEExprToTla((ITEExpr)expr);
             default:
                 return UnsupportedExpr(expr);
         }
@@ -219,6 +223,14 @@ public class TLACompiler : Compiler {
         return String.Format("{0}[{1}]", ExprToTla(expr.Seq), expr.E0);
     }
 
+    private string DatatypeValueToTla(DatatypeValue expr) {
+        var args = new List<string>();
+        foreach(var a in expr.Arguments) {
+            args.Add(ExprToTla(a));
+        }
+        return String.Format("{0}({1})", expr.MemberName, String.Join(", ", args));
+    }
+
     private string LetExprToTla(LetExpr expr) {
         Contract.Assert(expr.LHSs.Count == expr.RHSs.Count);
         var letInDefs = new List<String>();
@@ -259,6 +271,10 @@ public class TLACompiler : Compiler {
         } 
         var res = String.Format("\\A {0}: {1} => {2}", String.Join(",", quantifiedVars), range, term);
         return res;
+    }
+
+    private string ITEExprToTla(ITEExpr expr) {
+        return UnsupportedExpr(expr);
     }
 
     private string UnaryExprToTla(UnaryExpr e) {
