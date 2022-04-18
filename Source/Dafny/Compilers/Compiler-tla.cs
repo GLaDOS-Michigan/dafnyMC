@@ -168,6 +168,8 @@ public class TLACompiler : Compiler {
                 return MatchExprToTla((MatchExpr)expr);
             case ForallExpr:
                 return ForallExprToTla((ForallExpr)expr);
+            case ExistsExpr:
+                return ExistsExprToTla((ExistsExpr)expr);
             case ITEExpr:
                 return ITEExprToTla((ITEExpr)expr);
             case StmtExpr:
@@ -276,13 +278,20 @@ public class TLACompiler : Compiler {
     }
 
     private string ForallExprToTla(ForallExpr expr) {
-        var term = ExprToTla(expr.Term);
         var quantifiedVars = new List<string>();
-        var range = ExprToTla(expr.Range);
         foreach (var bv in expr.BoundVars) {
             quantifiedVars.Add(bv.CompileName);
         } 
-        var res = String.Format("\\A {0}: {1} => {2}", String.Join(",", quantifiedVars), range, term);
+        var res = String.Format("\\A {0}: {1}", String.Join(",", quantifiedVars), ExprToTla(expr.LogicalBody()));
+        return res;
+    }
+
+    private string ExistsExprToTla(ExistsExpr expr) {
+        var quantifiedVars = new List<string>();
+        foreach (var bv in expr.BoundVars) {
+            quantifiedVars.Add(bv.CompileName);
+        } 
+        var res = String.Format("\\E {0}: {1}", String.Join(", ", quantifiedVars), ExprToTla(expr.LogicalBody()));
         return res;
     }
 
