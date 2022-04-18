@@ -166,6 +166,8 @@ public class TLACompiler : Compiler {
                 return ForallExprToTla((ForallExpr)expr);
             case ITEExpr:
                 return ITEExprToTla((ITEExpr)expr);
+            case StmtExpr:
+                return StmtExprToTla((StmtExpr)expr);
             default:
                 return UnsupportedExpr(expr);
         }
@@ -278,6 +280,11 @@ public class TLACompiler : Compiler {
         var then = ExprToTla(expr.Thn);
         var els = ExprToTla(expr.Els);
         return String.Format("IF {0} THEN {1} ELSE {2}", test, then, els);
+    }
+
+    private string StmtExprToTla(StmtExpr expr) {
+        // Ignore the statement part of expr
+        return ExprToTla(expr.E);
     }
 
     private string UnaryExprToTla(UnaryExpr e) {
