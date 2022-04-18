@@ -149,8 +149,7 @@ public class TLACompiler : Compiler {
             case MemberSelectExpr:
                 return MemberSelectExprToTla((MemberSelectExpr)expr);
             case SeqSelectExpr:
-                // TODO
-                return "TODOSeqSelectExpr";
+                return SeqSelectExprToTla((SeqSelectExpr)expr);
             case UnaryExpr:
                 return UnaryExprToTla((UnaryExpr)expr);
             case BinaryExpr:
@@ -211,6 +210,13 @@ public class TLACompiler : Compiler {
         } else {
             Console.WriteLine(); throw new NotSupportedException(String.Format("TLA compiler does not support non-field members'{0}'", member));
         }
+    }
+
+    private string SeqSelectExprToTla(SeqSelectExpr expr) {
+        if (!expr.SelectOne) {
+            return UnsupportedExpr(expr);
+        }
+        return String.Format("{0}[{1}]", ExprToTla(expr.Seq), expr.E0);
     }
 
     private string LetExprToTla(LetExpr expr) {
