@@ -24,6 +24,10 @@ public class TLACompiler : Compiler {
     protected const string TLA_NEXT = "tla_Next";
     protected const string TLA_STATE = "tla_s";
 
+    // These two fields are used to keep track of the record and union types that are declared
+    private Dictionary<string, DatatypeDecl> records = new Dictionary<string, DatatypeDecl>();
+    private Dictionary<string, DatatypeDecl> unions = new Dictionary<string, DatatypeDecl>();
+
     protected override void EmitHeader(Program program, ConcreteSyntaxTree wr) {
         wr.WriteLine("---------------------------------- MODULE {0} ----------------------------------", Path.GetFileNameWithoutExtension(program.Name));
         wr.WriteLine("\\* Dafny module {0} compiled into TLA", program.Name);
@@ -81,11 +85,13 @@ public class TLACompiler : Compiler {
             var ctor = dt.Ctors[0]; 
             var record = DefineRecordType(ctor.Name, ctor.Formals);
             Console.WriteLine("                {0} == {1}", dt.Name, record);
+            records.Add(dt.Name, dt);
             wr.WriteLine("{0} == {1}", dt.Name, record);
         } else if (dt is IndDatatypeDecl) {
             // dt has multiple constructors
             Contract.Assert(dt.Ctors.Count > 1);
             Console.WriteLine("                {0} == {1}", dt.Name, DefineUnionType(dt.Ctors));
+            unions.Add(dt.Name, dt);
             wr.WriteLine("{0} == {1}", dt.Name, DefineUnionType(dt.Ctors));
         } else {
             throw new NotImplementedException(String.Format("DeclareDatatype {0} '{1}' is not supported", dt, dt.WhatKind));
@@ -208,7 +214,7 @@ public class TLACompiler : Compiler {
     }
 
     private string IdentifierExprToTla(IdentifierExpr expr){   
-        return expr.Var.CompileName;
+        return expr.Var.Name;
     }
 
     private string FunctionCallToTla(FunctionCallExpr e){   
@@ -228,9 +234,6 @@ public class TLACompiler : Compiler {
     }
 
     private string MemberSelectExprToTla(MemberSelectExpr expr) {
-        Console.WriteLine();Console.WriteLine();
-        Console.WriteLine("MemberSelectExpr {0}", Printer.ExprToString(expr));
-        Console.WriteLine();Console.WriteLine();
         var obj = expr.Obj;
         var memberName = expr.MemberName;
         var member = expr.Member;
@@ -291,9 +294,9 @@ public class TLACompiler : Compiler {
             var lhs = c.Ctor.Name;
             var rhs = ExprToTla(c.Body);
             if (i == 0) {
-                cases.Add(String.Format("CASE {0} -> {1}", lhs, rhs));
+                cases.Add(String.Format("CASE {0}.type = \"{1}\" -> {2}", source, lhs, rhs));
             } else {
-                cases.Add(String.Format("[] {0} -> {1}", lhs, rhs));
+                cases.Add(String.Format("[] {0}.type = \"{1}\" -> {2}", source, lhs, rhs));
             }
         }
         cases.Add("[] OTHER -> FALSE");
