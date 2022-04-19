@@ -307,7 +307,7 @@ public class TLACompiler : Compiler {
     private string ForallExprToTla(ForallExpr expr) {
         var quantifiedVars = new List<string>();
         foreach (var bv in expr.BoundVars) {
-            quantifiedVars.Add(bv.CompileName);
+            quantifiedVars.Add(bv.Name);
         } 
         var res = String.Format("\\A {0}: {1}", String.Join(",", quantifiedVars), ExprToTla(expr.LogicalBody()));
         return res;
@@ -340,7 +340,7 @@ public class TLACompiler : Compiler {
                 case UnaryOpExpr.Opcode.Not:
                     return String.Format("~{0}", ExprToTla(uo.E));
                 case UnaryOpExpr.Opcode.Cardinality:
-                    return String.Format("|{0}|", ExprToTla(uo.E));
+                    return String.Format("Cardinality({0})", ExprToTla(uo.E));
                 default:
                     return UnsupportedExpr(e);
             }
