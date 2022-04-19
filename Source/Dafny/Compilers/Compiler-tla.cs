@@ -32,7 +32,7 @@ public class TLACompiler : Compiler {
         wr.WriteLine("---------------------------------- MODULE {0} ----------------------------------", Path.GetFileNameWithoutExtension(program.Name));
         wr.WriteLine("\\* Dafny module {0} compiled into TLA", program.Name);
         wr.WriteLine();
-        wr.WriteLine("EXTENDS Integers");    // Common enough to always do this
+        wr.WriteLine("EXTENDS Integers, FiniteSets");    // Common enough to always do this 
         wr.WriteLine();
         wr.WriteLine("VARIABLE {0}", TLA_STATE); 
         wr.WriteLine();
@@ -255,7 +255,7 @@ public class TLACompiler : Compiler {
         if (!expr.SelectOne) {
             return UnsupportedExpr(expr);
         }
-        return String.Format("{0}[{1}]", ExprToTla(expr.Seq), expr.E0);
+        return String.Format("{0}[{1}]", ExprToTla(expr.Seq), ExprToTla(expr.E0));
     }
 
     private string SeqUpdateExprToTla(SeqUpdateExpr expr) {
