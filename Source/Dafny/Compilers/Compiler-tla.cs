@@ -228,11 +228,21 @@ public class TLACompiler : Compiler {
     }
 
     private string MemberSelectExprToTla(MemberSelectExpr expr) {
+        Console.WriteLine();Console.WriteLine();
+        Console.WriteLine("MemberSelectExpr {0}", Printer.ExprToString(expr));
+        Console.WriteLine();Console.WriteLine();
         var obj = expr.Obj;
         var memberName = expr.MemberName;
         var member = expr.Member;
         if (member is Field) {
-            return String.Format("{0}.{1}", ExprToTla(obj), member.Name);
+            var name = member.Name;
+            var isTypeQuestion = name[name.Length-1] == '?';
+            if (isTypeQuestion) {
+                // this "isTypeQuestion" test is kinda janky, but not sure of other way
+                return String.Format("{0}.type = \"{1}\"", ExprToTla(obj), name);
+            } else {
+                return String.Format("{0}.{1}", ExprToTla(obj), name);
+            }
         } else {
             Console.WriteLine(); throw new NotSupportedException(String.Format("TLA compiler does not support non-field members'{0}'", member));
         }
@@ -387,7 +397,7 @@ public class TLACompiler : Compiler {
                 Console.WriteLine(); 
                 throw new NotSupportedException(String.Format("TLA compiler does not support binary operation '{0}' in '{1} ({0}) {2}'", op, Printer.ExprToString(e0), Printer.ExprToString(e1)));
         }
-        return String.Format("{0} {1} {2}", ExprToTla(e0), opString, ExprToTla(e1));
+        return String.Format("({0} {1} {2})", ExprToTla(e0), opString, ExprToTla(e1));
     }
 
     private string SetDisplayExprToTla(SetDisplayExpr expr) {
