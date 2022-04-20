@@ -39,6 +39,7 @@ public class TLACompiler : Compiler {
         // Link local type declarations to dafny type
         wr.WriteLine("int == Int");
         wr.WriteLine("nat == Nat");
+        wr.WriteLine("bool == BOOLEAN");
     } 
 
     protected override void EmitFooter(Program program, ConcreteSyntaxTree wr) {
@@ -126,16 +127,16 @@ public class TLACompiler : Compiler {
         Console.WriteLine("                    Formals: ( {0} )", Printer.FormalListToString(formals));            
         // Console.WriteLine("                                Result type: {0}", f.ResultType.ToString());
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(body));
-        if (resultType == Type.Bool) {
+        // if (resultType == Type.Bool) {
             var arguments = new List<string>();
             foreach (var fm in formals) {
                 arguments.Add(fm.CompileName);
             }
             wr.WriteLine("{0}({1}) == {2}", name, String.Join(", ", arguments), ExprToTla(body));
             wr.WriteLine();
-        } else {
-            throw new NotImplementedException();
-        }
+        // } else {
+        //     throw new NotImplementedException();
+        // }
         return wr;
     }
 
@@ -145,10 +146,13 @@ public class TLACompiler : Compiler {
 
     /* Converts a Dafny type into a representation in TLA */
     private string TypeToTla(Type t) {
-        var res = t.ToString(); // default
+        var res = t.ToString();  // default
         if (t is SetType) {
             var st = (SetType) t;
             res = String.Format("SUBSET {0}", TypeToTla(st.Arg));
+        } else if (t is SeqType) {
+            var st = (SeqType) t;
+            res = String.Format("[Nat -> {0}]", TypeToTla(st.Arg));
         }
         return res;
     }
@@ -205,7 +209,7 @@ public class TLACompiler : Compiler {
             return (bool)e.Value ? "true" : "false";
         } else if (e is StringLiteralExpr) {
             var str = (StringLiteralExpr)e;
-            return String.Format("{0}", str);
+            return String.Format("{0}", Printer.ExprToString(str));
         } else if (e.Value is BigInteger i) {
             return i.ToString();
         } else {
@@ -270,6 +274,9 @@ public class TLACompiler : Compiler {
         foreach(var a in expr.Arguments) {
             args.Add(ExprToTla(a));
         }
+        if (args.Count == 0) {
+            return String.Format("\"{0}\"", expr.MemberName);
+        }
         return String.Format("{0}({1})", expr.MemberName, String.Join(", ", args));
     }
 
@@ -300,7 +307,7 @@ public class TLACompiler : Compiler {
             }
         }
         cases.Add("[] OTHER -> FALSE");
-        var res = String.Join(" ", cases);
+        var res = String.Join("\n", cases);
         return res;
     }
 
