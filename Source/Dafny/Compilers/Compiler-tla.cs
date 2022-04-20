@@ -130,7 +130,7 @@ public class TLACompiler : Compiler {
         // if (resultType == Type.Bool) {
             var arguments = new List<string>();
             foreach (var fm in formals) {
-                arguments.Add(fm.CompileName);
+                arguments.Add(ReplacePrime(fm.Name));
             }
             wr.WriteLine("{0}({1}) == {2}", name, String.Join(", ", arguments), ExprToTla(body));
             wr.WriteLine();
@@ -218,7 +218,7 @@ public class TLACompiler : Compiler {
     }
 
     private string IdentifierExprToTla(IdentifierExpr expr){   
-        return ReplaceHash(expr.Var.Name);
+        return ReplaceHash(ReplacePrime(expr.Var.Name));
     }
 
     private string FunctionCallToTla(FunctionCallExpr e){   
@@ -816,7 +816,6 @@ public class TLACompiler : Compiler {
         throw new NotImplementedException();
     }
 
-
     /*************************************************************************************
     *                                        Utils                                       *
     **************************************************************************************/
@@ -825,6 +824,11 @@ public class TLACompiler : Compiler {
     *  allowed in TLA, so we replace them with underscore _ */
     private static string ReplaceHash(string name) {
         return name.Replace("#", "_");
+    }
+
+    /* Primed variables have a special meaning in TLA, so we replace primes with _k */
+    private static string ReplacePrime(string name) {
+        return name.Replace("'", "_k");
     }
     
     private static string MangleName(string name) {
