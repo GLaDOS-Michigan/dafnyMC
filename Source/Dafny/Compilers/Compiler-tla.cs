@@ -218,7 +218,7 @@ public class TLACompiler : Compiler {
     }
 
     private string IdentifierExprToTla(IdentifierExpr expr){   
-        return expr.Var.Name;
+        return ReplaceHash(expr.Var.Name);
     }
 
     private string FunctionCallToTla(FunctionCallExpr e){   
@@ -299,15 +299,31 @@ public class TLACompiler : Compiler {
         for (var i = 0; i < expr.Cases.Count; i++) {
             var c = expr.Cases[i];
             var lhs = c.Ctor.Name;
+            var prelude = MatchCasePrelude(source, c);
             var rhs = ExprToTla(c.Body);
             if (i == 0) {
-                cases.Add(String.Format("CASE {0}.type = \"{1}\" -> {2}", source, lhs, rhs));
+                cases.Add(String.Format("CASE {0}.type = \"{1}\" -> {2} {3}", source, lhs, prelude, rhs));
             } else {
-                cases.Add(String.Format("[] {0}.type = \"{1}\" -> {2}", source, lhs, rhs));
+                cases.Add(String.Format("[] {0}.type = \"{1}\" -> {2} {3}", source, lhs, prelude, rhs));
             }
         }
         cases.Add("[] OTHER -> FALSE");
         var res = String.Join("\n", cases);
+        return res;
+    }
+
+    private string MatchCasePrelude(string source, MatchCaseExpr c) {
+        var definitions = new List<String>();
+        var ctor = c.Ctor;
+        if (ctor.Formals.Count == 0) {
+            return "";
+        } 
+        for (int i = 0; i < ctor.Formals.Count; i++) {
+            var name = ReplaceHash(c.Arguments[i].Name);
+            var def = String.Format("{0} == {1}.{2}", name, source, ctor.Formals[i].Name);
+            definitions.Add(def);
+        }
+        var res = String.Format("LET {0} IN", String.Join(" ", definitions));
         return res;
     }
 
@@ -801,6 +817,12 @@ public class TLACompiler : Compiler {
     *                                        Utils                                       *
     **************************************************************************************/
 
+    /* Dafny's AST sometimes have variable names with the hash symbol #. This is not 
+    *  allowed in TLA, so we replace them with underscore _ */
+    private static string ReplaceHash(string name) {
+        return name.Replace("#", "_");
+    }
+    
     private static string MangleName(string name) {
         return name.StartsWith("__") ? name[1..] : name;
     }
