@@ -85,12 +85,6 @@ predicate Init(c:Constants, ds:DistrSys)
 *                                        DS Next                                         *
 *****************************************************************************************/
 
-predicate Next(c:Constants, ds:DistrSys, ds':DistrSys) {
-    && c.WF()
-    && ds.WF(c)
-    && ds'.WF(c)
-    && exists actor, recvIo, sendIo :: NextOneAgent(c, ds, ds', actor, recvIo, sendIo)
-}
 
 predicate NextOneAgent(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIo:IoOpt, sendIo:IoOpt)
     requires c.WF() && ds.WF(c) && ds'.WF(c)
@@ -108,6 +102,13 @@ predicate NextOneAgent(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIo:
             && ds'.servers == ds.servers[actor.idx := ds'.servers[actor.idx]]
             && ServerNext(ds.servers[actor.idx], ds'.servers[actor.idx], recvIo, sendIo)
     }
+}
+
+predicate Next(c:Constants, ds:DistrSys, ds':DistrSys) {
+    && c.WF()
+    && ds.WF(c)
+    && ds'.WF(c)
+    && exists actor, recvIo, sendIo :: NextOneAgent(c, ds, ds', actor, recvIo, sendIo)
 }
 
 predicate ValidActor(c:Constants, actor:Id) 

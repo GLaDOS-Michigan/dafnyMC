@@ -17,24 +17,13 @@ datatype Client = Client(
     epoch:Epoch    
 )
 
-/* Client initial state */
-predicate ClientInit(c:Client, my_id:Id, servers:seq<Id>) {
-    && c.consts == CC(my_id, servers)
-    && c.state == Idle
-    && c.epoch == 0
+
+/* Client taking a stutter step */
+predicate ClientStutter(c:Client, c':Client, sendIo:IoOpt) {
+    && c' == c
+    && sendIo == None
 }
 
-/* Client next state */
-predicate ClientNext(c:Client, c':Client, recvIo:IoOpt, sendIo:IoOpt) {
-    && c'.consts == c.consts
-    && match c.state {
-        case Idle => ClientSendRequest(c, c', recvIo, sendIo)
-        case Pending => ClientPending(c, c', recvIo, sendIo)
-        //Bug 1: Pending case had the following 
-        // case Pending => recvIo.None? && ClientStutter(c, c', sendIo)
-        case Working(sid) => ClientRelease(c, c', recvIo, sendIo)
-    }
-}
 
 /* Client sends a request to some non-determined server */
 predicate ClientSendRequest(c:Client, c':Client, recvIo:IoOpt, sendIo:IoOpt) 
@@ -51,17 +40,6 @@ predicate ClientSendRequest(c:Client, c':Client, recvIo:IoOpt, sendIo:IoOpt)
         ClientStutter(c, c', sendIo)
 }
 
-/* Client is waiting for server to Grant or Reject a pending request */
-predicate ClientPending(c:Client, c':Client, recvIo:IoOpt, sendIo:IoOpt)
-    requires c.state == Pending
-{
-    && recvIo.Some?
-    && match recvIo.p.msg {
-        case Grant(e) => ClientPending_RcvGrant(c, c', recvIo.p, sendIo)
-        case Reject(e) => ClientPending_RcvReject(c, c', recvIo.p, sendIo)
-        case _ => ClientStutter(c, c', sendIo)
-    }
-}
 
 predicate ClientPending_RcvGrant(c:Client, c':Client, p:Packet, sendIo:IoOpt)
     requires c.state == Pending
@@ -89,6 +67,20 @@ predicate ClientPending_RcvReject(c:Client, c':Client, p:Packet, sendIo:IoOpt)
         && sendIo == None
 }
 
+
+/* Client is waiting for server to Grant or Reject a pending request */
+predicate ClientPending(c:Client, c':Client, recvIo:IoOpt, sendIo:IoOpt)
+    requires c.state == Pending
+{
+    && recvIo.Some?
+    && match recvIo.p.msg {
+        case Grant(e) => ClientPending_RcvGrant(c, c', recvIo.p, sendIo)
+        case Reject(e) => ClientPending_RcvReject(c, c', recvIo.p, sendIo)
+        case _ => ClientStutter(c, c', sendIo)
+    }
+}
+
+
 /* Client releases the held resource */
 predicate ClientRelease(c:Client, c':Client, recvIo:IoOpt, sendIo:IoOpt) 
     requires c.state.Working?
@@ -99,9 +91,25 @@ predicate ClientRelease(c:Client, c':Client, recvIo:IoOpt, sendIo:IoOpt)
     && sendIo == Some(Packet(c.consts.id, c.state.sid, Release(c.epoch)))
 }
 
-/* Client taking a stutter step */
-predicate ClientStutter(c:Client, c':Client, sendIo:IoOpt) {
-    && c' == c
-    && sendIo == None
+
+/* Client initial state */
+predicate ClientInit(c:Client, my_id:Id, servers:seq<Id>) {
+    && c.consts == CC(my_id, servers)
+    && c.state == Idle
+    && c.epoch == 0
 }
+
+/* Client next state */
+predicate ClientNext(c:Client, c':Client, recvIo:IoOpt, sendIo:IoOpt) {
+    && c'.consts == c.consts
+    && match c.state {
+        case Idle => ClientSendRequest(c, c', recvIo, sendIo)
+        case Pending => ClientPending(c, c', recvIo, sendIo)
+        //Bug 1: Pending case had the following 
+        // case Pending => recvIo.None? && ClientStutter(c, c', sendIo)
+        case Working(sid) => ClientRelease(c, c', recvIo, sendIo)
+    }
+}
+
+
 }

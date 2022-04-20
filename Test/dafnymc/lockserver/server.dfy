@@ -13,6 +13,13 @@ datatype Server = Server(
     epoch_map:map<Id, Epoch>    // maps each client to the latest epoch seen from that client
 )
 
+
+/* Server taking a stutter step */
+predicate ServerStutter(s:Server, s':Server, sendIo:IoOpt) {
+    && s' == s
+    && sendIo == None
+}
+
 /* Server initial state */
 predicate ServerInit(s:Server, id:Id) {
     && s.id == id
@@ -20,17 +27,23 @@ predicate ServerInit(s:Server, id:Id) {
     && s.epoch_map == map[]
 }
 
-/* Server next state */
-predicate ServerNext(s:Server, s':Server, recvIo:IoOpt, sendIo:IoOpt) 
+
+predicate ProcessRequest_Grant(s:Server, s':Server, p:Packet, sendIo:IoOpt) 
+    requires p.msg.Request?
 {
-    && recvIo.Some? 
-    && s'.id == s.id
-    && match recvIo.p.msg {
-        case Request(e) => ProcessRequest(s, s', recvIo, sendIo)
-        case Release(e) => ProcessRelease(s, s', recvIo, sendIo)
-        case _ => ServerStutter(s, s', sendIo)
-    }
+    && s'.epoch_map == s.epoch_map[p.src := p.msg.e]
+    && s'.resource == Held(p.src)
+    && sendIo == Some(Packet(s.id, p.src, Grant(p.msg.e)))
 }
+
+predicate ProcessRequest_Reject(s:Server, s':Server, p:Packet, sendIo:IoOpt) 
+    requires p.msg.Request?
+{
+    && s'.epoch_map == s.epoch_map
+    && s'.resource == s.resource
+    && sendIo == Some(Packet(s.id, p.src, Reject(p.msg.e)))
+}
+
 
 /* Server processing a Request message from a client */
 predicate ProcessRequest(s:Server, s':Server, recvIo:IoOpt, sendIo:IoOpt) 
@@ -52,21 +65,14 @@ predicate ProcessRequest(s:Server, s':Server, recvIo:IoOpt, sendIo:IoOpt)
         ProcessRequest_Reject(s, s', recvIo.p, sendIo)
 }
 
-predicate ProcessRequest_Grant(s:Server, s':Server, p:Packet, sendIo:IoOpt) 
-    requires p.msg.Request?
-{
-    && s'.epoch_map == s.epoch_map[p.src := p.msg.e]
-    && s'.resource == Held(p.src)
-    && sendIo == Some(Packet(s.id, p.src, Grant(p.msg.e)))
+
+
+predicate ProcessRelease_Release(s:Server, s':Server, sendIo:IoOpt) {
+    && s'.epoch_map == s.epoch_map
+    && s'.resource == Free
+    && sendIo == None
 }
 
-predicate ProcessRequest_Reject(s:Server, s':Server, p:Packet, sendIo:IoOpt) 
-    requires p.msg.Request?
-{
-    && s'.epoch_map == s.epoch_map
-    && s'.resource == s.resource
-    && sendIo == Some(Packet(s.id, p.src, Reject(p.msg.e)))
-}
 
 /* Server processing a Release message from a client */
 predicate ProcessRelease(s:Server, s':Server, recvIo:IoOpt, sendIo:IoOpt) 
@@ -83,15 +89,17 @@ predicate ProcessRelease(s:Server, s':Server, recvIo:IoOpt, sendIo:IoOpt)
         ServerStutter(s, s', sendIo)
 }
 
-predicate ProcessRelease_Release(s:Server, s':Server, sendIo:IoOpt) {
-    && s'.epoch_map == s.epoch_map
-    && s'.resource == Free
-    && sendIo == None
+
+/* Server next state */
+predicate ServerNext(s:Server, s':Server, recvIo:IoOpt, sendIo:IoOpt) 
+{
+    && recvIo.Some? 
+    && s'.id == s.id
+    && match recvIo.p.msg {
+        case Request(e) => ProcessRequest(s, s', recvIo, sendIo)
+        case Release(e) => ProcessRelease(s, s', recvIo, sendIo)
+        case _ => ServerStutter(s, s', sendIo)
+    }
 }
 
-/* Server taking a stutter step */
-predicate ServerStutter(s:Server, s':Server, sendIo:IoOpt) {
-    && s' == s
-    && sendIo == None
-}
 }
