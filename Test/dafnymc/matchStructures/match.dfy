@@ -33,4 +33,9 @@ function WhatsForBreakfast_func(b: Breakfast) : string {
     }
 }
 
+method Main() {
+    var x := WhatsForBreakfast_imp(Pumpernickel);
+    print x;
+}
+
 }
