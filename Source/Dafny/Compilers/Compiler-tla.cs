@@ -230,9 +230,9 @@ public class TLACompiler : Compiler {
                 arguments.Add(ExprToTla(arg));
             }
             if (arguments.Count == 0) {
-                return String.Format("{0}", e.Name);
+                return String.Format("{0}", e.Function.CompileName);
             } else {
-                return String.Format("{0}({1})", e.Name, String.Join(", ", arguments));
+                return String.Format("{0}({1})", e.Function.CompileName, String.Join(", ", arguments));
             }
         }
     }
