@@ -1211,8 +1211,8 @@ namespace Microsoft.Dafny {
               v.Visit(sst);
             } else {
               if (IsTlaCompiler()) {
-                var sd = (TypeSynonymDecl) d;
-                ((TLACompiler) this).DeclareTypeSynonym(sd, wr);
+                var sd = (TypeSynonymDecl)d;
+                ((TLACompiler)this).DeclareTypeSynonym(sd, wr);
               }
               continue;
             }
@@ -1838,12 +1838,38 @@ namespace Microsoft.Dafny {
           }
           v.Visit(f);
         } else if (member is Method m) {
-          // TONY: Ignore for now
-          // NotSupportedByTlaCompiler();
+          if (IsTlaCompiler()) {
+            continue;
+          }
+          if (m.Body == null && !(c is TraitDecl && !m.IsStatic) &&
+              !(!DafnyOptions.O.DisallowExterns && (Attributes.Contains(m.Attributes, "dllimport") || (IncludeExternMembers && Attributes.Contains(m.Attributes, "extern"))))) {
+            // A (ghost or non-ghost) method must always have a body, except if it's an instance method in a trait.
+            if (Attributes.Contains(m.Attributes, "axiom") || (!DafnyOptions.O.DisallowExterns && Attributes.Contains(m.Attributes, "extern"))) {
+              // suppress error message
+            } else {
+              Error(m.tok, "Method {0} has no body", errorWr, m.FullName);
+            }
+          } else if (m.IsGhost) {
+            if (m.Body == null) {
+              Contract.Assert(c is TraitDecl && !m.IsStatic);
+            }
+          } else if (c is TraitDecl && !m.IsStatic) {
+            if (m.OverriddenMember == null) {
+              var w = classWriter.CreateMethod(m, CombineAllTypeArguments(m), false, false, false);
+              Contract.Assert(w == null);  // since we requested no body
+            } else if (TraitRepeatsInheritedDeclarations) {
+              RedeclareInheritedMember(m, classWriter);
+            }
+            if (m.Body != null) {
+              CompileMethod(program, m, classWriter, true);
+            }
+          } else {
+            CompileMethod(program, m, classWriter, false);
+          }
+          v.Visit(m);
         } else {
           Contract.Assert(false); throw new cce.UnreachableException();  // unexpected member
         }
-
         thisContext = null;
       }
     }
