@@ -153,6 +153,9 @@ public class TLACompiler : Compiler {
         } else if (t is SeqType) {
             var st = (SeqType) t;
             res = String.Format("[Nat -> {0}]", TypeToTla(st.Arg));
+        } else if (t is MapType) {
+            var mt = (MapType) t;
+            res = String.Format("[{0} -> {1}]", TypeToTla(mt.Domain), TypeToTla(mt.Range));
         }
         return res;
     }
@@ -439,6 +442,10 @@ public class TLACompiler : Compiler {
     }
 
     private string MapDisplayExprToTla(MapDisplayExpr expr) {
+        if (expr.Elements.Count == 0) {
+            // This is the function with the empty domain
+            return "[x \\in {} |-> TRUE]";
+        }
         var items = new List<string>();
         foreach (var mapping in expr.Elements) {
             items.Add(String.Format("{0} |-> {1}", mapping.A, mapping.B));
