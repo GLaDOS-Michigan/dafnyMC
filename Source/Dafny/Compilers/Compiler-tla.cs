@@ -270,14 +270,18 @@ public class TLACompiler : Compiler {
     }
 
     private string DatatypeValueToTla(DatatypeValue expr) {
-        var args = new List<string>();
-        foreach(var a in expr.Arguments) {
-            args.Add(ExprToTla(a));
-        }
-        if (args.Count == 0) {
+        if (expr.Arguments.Count == 0) {
             return String.Format("\"{0}\"", expr.MemberName);
+        } 
+        // This is a record we are dealing with 
+        var type = expr.MemberName;
+        var fields = new List<string>();
+        for (int i=0; i<expr.Arguments.Count; i++) {
+            var formal = expr.Ctor.Formals[i].Name;
+            var value = ExprToTla(expr.Arguments[i]);
+            fields.Add(String.Format("{0} |-> {1}", formal, value));
         }
-        return String.Format("{0}({1})", expr.MemberName, String.Join(", ", args));
+        return String.Format("[type |-> \"{0}\", {1}]", type, String.Join(", ", fields));
     }
 
     private string LetExprToTla(LetExpr expr) {
