@@ -296,7 +296,7 @@ public class TLACompiler : Compiler {
             letInDefs.Add(String.Format("{0} == {1}", name, def));
         }
         // Using (**) as visual seperator
-        var res = String.Format("LET {0} IN {1}", String.Join(" (**) ", letInDefs), ExprToTla(expr.Body));
+        var res = String.Format("LET {0} IN\n{1}", String.Join(" (**) ", letInDefs), ExprToTla(expr.Body));
         return res;
     }
 
@@ -330,7 +330,7 @@ public class TLACompiler : Compiler {
             var def = String.Format("{0} == {1}.{2}", name, source, ctor.Formals[i].Name);
             definitions.Add(def);
         }
-        var res = String.Format("LET {0} IN", String.Join(" ", definitions));
+        var res = String.Format("LET {0} IN\n", String.Join(" ", definitions));
         return res;
     }
 
