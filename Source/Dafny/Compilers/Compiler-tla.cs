@@ -263,14 +263,16 @@ public class TLACompiler : Compiler {
         if (!expr.SelectOne) {
             return UnsupportedExpr(expr);
         }
-        return String.Format("{0}[{1}]", ExprToTla(expr.Seq), ExprToTla(expr.E0));
+        // Note the +1 as TLA sequences are 1-indexed
+        return String.Format("{0}[{1}+1]", ExprToTla(expr.Seq), ExprToTla(expr.E0));
     }
 
     private string SeqUpdateExprToTla(SeqUpdateExpr expr) {
         var seq = ExprToTla(expr.Seq);
         var index = ExprToTla(expr.Index);
         var val = ExprToTla(expr.Value);
-        return String.Format("[{0} EXCEPT![{1}] = {2}]", seq, index, val);
+        // Note the +1 as TLA sequences are 1-indexed
+        return String.Format("[{0} EXCEPT![{1}+1] = {2}]", seq, index, val);
     }
 
     private string DatatypeValueToTla(DatatypeValue expr) {
