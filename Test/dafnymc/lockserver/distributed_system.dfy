@@ -13,12 +13,9 @@ import opened Generic_Defs
 
 datatype Constants = Constants(client_ids:seq<Id>, server_ids:seq<Id>)
 
-predicate WF(c:Constants) {
-    && |c.client_ids| >= 1
-    && |c.server_ids| >= 1
-    && ValidTypes(c)
-    && ValidIds(c)
-    && UniqueIds(c)
+predicate ValidTypes(c:Constants) {
+    && (forall l | l in c.client_ids :: l.agt.C?)
+    && (forall l | l in c.server_ids :: l.agt.S?)
 }
 
 predicate ValidServerIdx(c:Constants, i:int) {
@@ -37,11 +34,6 @@ predicate ValidClientId(c:Constants, id:Id) {
     id.agt == C && ValidClientIdx(c, id.idx)
 }
 
-predicate ValidTypes(c:Constants) {
-    && (forall l | l in c.client_ids :: l.agt.C?)
-    && (forall l | l in c.server_ids :: l.agt.S?)
-}
-
 predicate UniqueIds(c:Constants) {
     && seqIsUnique(c.client_ids)
     && seqIsUnique(c.server_ids)
@@ -50,6 +42,14 @@ predicate UniqueIds(c:Constants) {
 predicate ValidIds(c:Constants) {
     && (forall i | ValidClientIdx(c, i) :: c.client_ids[i].idx == i)
     && (forall i | ValidServerIdx(c, i) :: c.server_ids[i].idx == i)
+}
+
+predicate WF(c:Constants) {
+    && |c.client_ids| >= 1
+    && |c.server_ids| >= 1
+    && ValidTypes(c)
+    && ValidIds(c)
+    && UniqueIds(c)
 }
 
 datatype DistrSys = DistrSys(
@@ -85,6 +85,14 @@ predicate Init(c:Constants, ds:DistrSys)
 *                                        DS Next                                         *
 *****************************************************************************************/
 
+predicate ValidActor(c:Constants, actor:Id) 
+    requires WF(c)
+{
+     match actor.agt {
+        case C => ValidClientIdx(c,actor.idx)
+        case S => ValidServerIdx(c,actor.idx)
+    }
+}
 
 predicate NextOneAgent(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIo:IoOpt, sendIo:IoOpt)
     requires WF(c) && dsWF(c,ds) && dsWF(c,ds')
@@ -109,14 +117,5 @@ predicate Next(c:Constants, ds:DistrSys, ds':DistrSys) {
     && dsWF(c, ds)
     && dsWF(c, ds')
     && exists actor, recvIo, sendIo :: NextOneAgent(c, ds, ds', actor, recvIo, sendIo)
-}
-
-predicate ValidActor(c:Constants, actor:Id) 
-    requires WF(c)
-{
-     match actor.agt {
-        case C => ValidClientIdx(c,actor.idx)
-        case S => ValidServerIdx(c,actor.idx)
-    }
 }
 }
