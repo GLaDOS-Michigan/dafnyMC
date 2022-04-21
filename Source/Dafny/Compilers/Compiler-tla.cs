@@ -125,18 +125,14 @@ public class TLACompiler : Compiler {
       MemberDecl member, string ownerName, ConcreteSyntaxTree wr, bool forBodyInheritance, bool lookasideBody) {
         Console.WriteLine("                    Name: {0}", name);
         Console.WriteLine("                    Formals: ( {0} )", Printer.FormalListToString(formals));            
-        // Console.WriteLine("                                Result type: {0}", f.ResultType.ToString());
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(body));
-        // if (resultType == Type.Bool) {
-            var arguments = new List<string>();
-            foreach (var fm in formals) {
-                arguments.Add(ReplacePrime(fm.Name));
-            }
+        var arguments = from fm in formals select ReplacePrime(fm.Name);
+        if (arguments.Count() == 0) {
+            wr.WriteLine("{0} == {1}", name, ExprToTla(body));
+        } else {
             wr.WriteLine("{0}({1}) == {2}", name, String.Join(", ", arguments), ExprToTla(body));
-            wr.WriteLine();
-        // } else {
-        //     throw new NotImplementedException();
-        // }
+        }
+        wr.WriteLine();
         return wr;
     }
 
