@@ -67,3 +67,4 @@ package-lock.json
 
 # Tony's local stuff
 **/*.icloud
+dafny.md
