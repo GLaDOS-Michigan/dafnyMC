@@ -285,6 +285,15 @@ public class TLACompiler : Compiler {
 
     private string LetExprToTla(LetExpr expr) {
         Contract.Assert(expr.LHSs.Count == expr.RHSs.Count);
+        if (!expr.Exact) {
+            // This is a CHOOSE expression
+            Contract.Assert(expr.LHSs.Count > 0);
+            var name = expr.LHSs[0].Var.Name;
+            var type = TypeToTla(expr.LHSs[0].Var.Type);
+            var constraint = ExprToTla(expr.RHSs[0]);
+            var choose = String.Format("CHOOSE {0} \\in {1} : {2}", name, type, constraint);
+            return String.Format("LET {0} == {1} IN\n{2}", name, choose, ExprToTla(expr.Body));
+        }
         var letInDefs = new List<String>();
         for (int i = 0; i < expr.LHSs.Count; i++) {
             var name = expr.LHSs[i].Var.Name;
