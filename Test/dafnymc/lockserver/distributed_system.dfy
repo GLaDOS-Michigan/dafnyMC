@@ -11,61 +11,61 @@ import opened Client_Agent
 import opened Server_Agent
 import opened Generic_Defs
 
-datatype Constants = Constants(client_ids:seq<Id>, server_ids:seq<Id>) {
-    predicate WF() {
-        && |client_ids| >= 1
-        && |server_ids| >= 1
-        && ValidTypes()
-        && ValidIds()
-        && UniqueIds()
-    }
+datatype Constants = Constants(client_ids:seq<Id>, server_ids:seq<Id>)
 
-    predicate ValidServerIdx(i:int) {
-        0<=i<|server_ids|
-    }
+predicate WF(c:Constants) {
+    && |c.client_ids| >= 1
+    && |c.server_ids| >= 1
+    && ValidTypes(c)
+    && ValidIds(c)
+    && UniqueIds(c)
+}
 
-    predicate ValidClientIdx(i:int) {
-        0<=i<|client_ids|
-    }
+predicate ValidServerIdx(c:Constants, i:int) {
+    0<=i<|c.server_ids|
+}
 
-    predicate ValidServerId(id:Id) {
-        id.agt == S && ValidServerIdx(id.idx)
-    }
+predicate ValidClientIdx(c:Constants, i:int) {
+    0<=i<|c.client_ids|
+}
 
-    predicate ValidClientId(id:Id) {
-        id.agt == C && ValidClientIdx(id.idx)
-    }
+predicate ValidServerId(c:Constants, id:Id) {
+    id.agt == S && ValidServerIdx(c, id.idx)
+}
 
-    predicate ValidTypes() {
-        && (forall l | l in client_ids :: l.agt.C?)
-        && (forall l | l in server_ids :: l.agt.S?)
-    }
+predicate ValidClientId(c:Constants, id:Id) {
+    id.agt == C && ValidClientIdx(c, id.idx)
+}
 
-    predicate UniqueIds() {
-        && seqIsUnique(client_ids)
-        && seqIsUnique(server_ids)
-    }
+predicate ValidTypes(c:Constants) {
+    && (forall l | l in c.client_ids :: l.agt.C?)
+    && (forall l | l in c.server_ids :: l.agt.S?)
+}
 
-    predicate ValidIds() {
-        && (forall i | ValidClientIdx(i) :: client_ids[i].idx == i)
-        && (forall i | ValidServerIdx(i) :: server_ids[i].idx == i)
-    }
+predicate UniqueIds(c:Constants) {
+    && seqIsUnique(c.client_ids)
+    && seqIsUnique(c.server_ids)
+}
+
+predicate ValidIds(c:Constants) {
+    && (forall i | ValidClientIdx(c, i) :: c.client_ids[i].idx == i)
+    && (forall i | ValidServerIdx(c, i) :: c.server_ids[i].idx == i)
 }
 
 datatype DistrSys = DistrSys(
     network: Environment,
     clients: seq<Client>,
     servers: seq<Server>
-) {
-    predicate WF(c: Constants)
-        requires c.WF()
-    {
-        && |clients| == |c.client_ids|
-        && |servers| == |c.server_ids|
-        && (forall i | c.ValidClientIdx(i) :: clients[i].consts.id == c.client_ids[i])
-        && (forall i | c.ValidServerIdx(i) :: servers[i].id == c.server_ids[i])
-        && (forall i | c.ValidClientIdx(i) :: clients[i].consts.servers == c.server_ids)
-    }
+) 
+    
+predicate dsWF(c: Constants, ds:DistrSys) 
+    requires WF(c)
+{
+    && |ds.clients| == |c.client_ids|
+    && |ds.servers| == |c.server_ids|
+    && (forall i | ValidClientIdx(c,i) :: ds.clients[i].consts.id == c.client_ids[i])
+    && (forall i | ValidServerIdx(c,i) :: ds.servers[i].id == c.server_ids[i])
+    && (forall i | ValidClientIdx(c,i) :: ds.clients[i].consts.servers == c.server_ids)
 }
 
 /*****************************************************************************************
@@ -73,11 +73,11 @@ datatype DistrSys = DistrSys(
 *****************************************************************************************/
 predicate Init(c:Constants, ds:DistrSys) 
 {
-    && c.WF()
-    && ds.WF(c)
+    && WF(c)
+    && dsWF(c, ds)
     && EnvironmentInit(ds.network)
-    && (forall i | c.ValidClientIdx(i) :: ClientInit(ds.clients[i], c.client_ids[i], c.server_ids))
-    && (forall i | c.ValidServerIdx(i) :: ServerInit(ds.servers[i], c.server_ids[i]))
+    && (forall i | ValidClientIdx(c,i) :: ClientInit(ds.clients[i], c.client_ids[i], c.server_ids))
+    && (forall i | ValidServerIdx(c,i) :: ServerInit(ds.servers[i], c.server_ids[i]))
 }
 
 
@@ -87,7 +87,7 @@ predicate Init(c:Constants, ds:DistrSys)
 
 
 predicate NextOneAgent(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIo:IoOpt, sendIo:IoOpt)
-    requires c.WF() && ds.WF(c) && ds'.WF(c)
+    requires WF(c) && dsWF(c,ds) && dsWF(c,ds')
 {
     && ValidActor(c, actor)
     && ds.network.nextStep == IoStep(actor, recvIo, sendIo)
@@ -105,18 +105,18 @@ predicate NextOneAgent(c:Constants, ds:DistrSys, ds':DistrSys, actor:Id, recvIo:
 }
 
 predicate Next(c:Constants, ds:DistrSys, ds':DistrSys) {
-    && c.WF()
-    && ds.WF(c)
-    && ds'.WF(c)
+    && WF(c)
+    && dsWF(c, ds)
+    && dsWF(c, ds')
     && exists actor, recvIo, sendIo :: NextOneAgent(c, ds, ds', actor, recvIo, sendIo)
 }
 
 predicate ValidActor(c:Constants, actor:Id) 
-    requires c.WF()
+    requires WF(c)
 {
      match actor.agt {
-        case C => c.ValidClientIdx(actor.idx)
-        case S => c.ValidServerIdx(actor.idx)
+        case C => ValidClientIdx(c,actor.idx)
+        case S => ValidServerIdx(c,actor.idx)
     }
 }
 }
