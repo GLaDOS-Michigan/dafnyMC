@@ -131,7 +131,7 @@ public class TLACompiler : Compiler {
         Console.WriteLine("                    Name: {0}", name);
         Console.WriteLine("                    Formals: ( {0} )", Printer.FormalListToString(formals));            
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(body));
-        var arguments = from fm in formals select ReplacePrime(fm.Name);
+        var arguments = from fm in formals select ReplacePrime(fm.CompileName);
         if (arguments.Count() == 0) {
             wr.WriteLine("{0} == {1}", name, ExprToTla(body));
         } else {
@@ -222,7 +222,7 @@ public class TLACompiler : Compiler {
     }
 
     private string IdentifierExprToTla(IdentifierExpr expr){   
-        return ReplaceHash(ReplacePrime(expr.Var.Name));
+        return ReplaceHash(ReplacePrime(expr.Var.CompileName));
     }
 
     private string FunctionCallToTla(FunctionCallExpr e){   
@@ -281,7 +281,7 @@ public class TLACompiler : Compiler {
         var type = expr.MemberName;
         var fields = new List<string>();
         for (int i=0; i<expr.Arguments.Count; i++) {
-            var formal = expr.Ctor.Formals[i].Name;
+            var formal = expr.Ctor.Formals[i].CompileName;
             var value = ExprToTla(expr.Arguments[i]);
             fields.Add(String.Format("{0} |-> {1}", formal, value));
         }
@@ -293,7 +293,7 @@ public class TLACompiler : Compiler {
         if (!expr.Exact) {
             // This is a CHOOSE expression
             Contract.Assert(expr.LHSs.Count > 0);
-            var name = expr.LHSs[0].Var.Name;
+            var name = expr.LHSs[0].Var.CompileName;
             var type = TypeToTla(expr.LHSs[0].Var.Type);
             var constraint = ExprToTla(expr.RHSs[0]);
             var choose = String.Format("CHOOSE {0} \\in {1} : {2}", name, type, constraint);
@@ -301,7 +301,7 @@ public class TLACompiler : Compiler {
         }
         var letInDefs = new List<String>();
         for (int i = 0; i < expr.LHSs.Count; i++) {
-            var name = expr.LHSs[i].Var.Name;
+            var name = expr.LHSs[i].Var.CompileName;
             var def = ExprToTla(expr.RHSs[i]);
             letInDefs.Add(String.Format("{0} == {1}", name, def));
         }
@@ -315,7 +315,7 @@ public class TLACompiler : Compiler {
         var cases = new List<string>();
         for (var i = 0; i < expr.Cases.Count; i++) {
             var c = expr.Cases[i];
-            var lhs = c.Ctor.Name;
+            var lhs = c.Ctor.CompileName;
             var prelude = MatchCasePrelude(source, c);
             var rhs = ExprToTla(c.Body);
             if (i == 0) {
@@ -336,8 +336,8 @@ public class TLACompiler : Compiler {
             return "";
         } 
         for (int i = 0; i < ctor.Formals.Count; i++) {
-            var name = ReplaceHash(c.Arguments[i].Name);
-            var def = String.Format("{0} == {1}.{2}", name, source, ctor.Formals[i].Name);
+            var name = ReplaceHash(c.Arguments[i].CompileName);
+            var def = String.Format("{0} == {1}.{2}", name, source, ctor.Formals[i].CompileName);
             definitions.Add(def);
         }
         var res = String.Format("LET {0} IN\n", String.Join(" ", definitions));
@@ -347,7 +347,7 @@ public class TLACompiler : Compiler {
     private string ForallExprToTla(ForallExpr expr) {
         var quantifiedVars = new List<string>();
         foreach (var bv in expr.BoundVars) {
-            quantifiedVars.Add(bv.Name);
+            quantifiedVars.Add(bv.CompileName);
         } 
         var res = String.Format("\\A {0}: {1}", String.Join(",", quantifiedVars), ExprToTla(expr.LogicalBody()));
         return res;
@@ -410,6 +410,8 @@ public class TLACompiler : Compiler {
                 opString = "<="; break;
             case BinaryExpr.ResolvedOpcode.Lt:
                 opString = "<"; break;
+            case BinaryExpr.ResolvedOpcode.Ge:
+                opString = ">="; break;
             case BinaryExpr.ResolvedOpcode.Gt:
                 opString = ">"; break;
             case BinaryExpr.ResolvedOpcode.Add:
