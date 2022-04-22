@@ -1,3 +1,5 @@
+// Chapter 3 Exercise 1
+
 //#title Coke Machine
 //#desc The first state machine specification exercise: fill in actions.
 //#elide

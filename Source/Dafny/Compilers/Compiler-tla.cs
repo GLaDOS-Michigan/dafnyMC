@@ -95,12 +95,13 @@ public class TLACompiler : Compiler {
             unions.Add(dt.Name, dt);
             wr.WriteLine("{0} == {1}", dt.Name, DefineUnionType(dt.Ctors));
         } else {
+            Console.WriteLine();
             throw new NotImplementedException(String.Format("DeclareDatatype {0} '{1}' is not supported", dt, dt.WhatKind));
         }
         if (dt.Members.Count > 0) {
-            // Disabling this feature; ignore datatype members for now
-            // return new ClassWriter(this, dt.Name, null, wr);
-            return null;
+            // Disabling this feature;
+            Console.WriteLine();
+            throw new NotImplementedException(String.Format("Datatype {0} has members, which is not supported", dt.FullName));
         }
         return null;
     }
