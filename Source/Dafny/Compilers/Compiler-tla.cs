@@ -22,6 +22,7 @@ public class TLACompiler : Compiler {
     protected string NextPred = "Next";
     protected const string TLA_INIT = "tla_Init";
     protected const string TLA_NEXT = "tla_Next";
+    protected const string TLA_CONST = "tla_c";
     protected const string TLA_STATE = "tla_s";
 
     // These two fields are used to keep track of the record and union types that are declared
@@ -34,6 +35,7 @@ public class TLACompiler : Compiler {
         wr.WriteLine();
         wr.WriteLine("EXTENDS Integers, FiniteSets");    // Common enough to always do this 
         wr.WriteLine();
+        wr.WriteLine("CONSTANT {0}", TLA_CONST); 
         wr.WriteLine("VARIABLE {0}", TLA_STATE); 
         wr.WriteLine();
         // Link local type declarations to dafny type
@@ -251,7 +253,7 @@ public class TLACompiler : Compiler {
             var isTypeQuestion = name[name.Length-1] == '?';
             if (isTypeQuestion) {
                 // this "isTypeQuestion" test is kinda janky, but not sure of other way
-                return String.Format("{0}.type = \"{1}\"", ExprToTla(obj), name);
+                return String.Format("{0}.type = \"{1}\"", ExprToTla(obj), name.Substring(0, name.Length-1));
             } else {
                 return String.Format("{0}.{1}", ExprToTla(obj), name);
             }
