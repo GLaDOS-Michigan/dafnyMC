@@ -381,11 +381,16 @@ public class TLACompiler : Compiler {
 
     private string UnaryExprToTla(UnaryExpr e) {
         if (e is UnaryOpExpr uo) {
+            var exp = uo.E;
             switch (uo.Op) {
                 case UnaryOpExpr.Opcode.Not:
-                    return String.Format("~{0}", ExprToTla(uo.E));
+                    return String.Format("~{0}", ExprToTla(exp));
                 case UnaryOpExpr.Opcode.Cardinality:
-                    return String.Format("Cardinality({0})", ExprToTla(uo.E));
+                    if (exp.Type.IsSeqType || exp.Type.IsMapType) {
+                        return String.Format("Cardinality(DOMAIN({0}))", ExprToTla(exp));
+                    } else {
+                        return String.Format("Cardinality({0})", ExprToTla(exp));
+                    }
                 default:
                     return UnsupportedExpr(e);
             }

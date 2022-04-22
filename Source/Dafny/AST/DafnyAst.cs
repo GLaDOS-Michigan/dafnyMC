@@ -1291,6 +1291,12 @@ namespace Microsoft.Dafny {
         return t != null && !t.Finite;
       }
     }
+    public bool IsSeqType {
+      get {
+        var t = NormalizeExpand() as SeqType;
+        return t != null;
+      }
+    }
     public NewtypeDecl AsNewtype {
       get {
         var udt = NormalizeExpand() as UserDefinedType;
