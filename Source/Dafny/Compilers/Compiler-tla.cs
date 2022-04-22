@@ -273,14 +273,14 @@ public class TLACompiler : Compiler {
     private string SeqUpdateExprToTla(SeqUpdateExpr expr) {
         var seq = ExprToTla(expr.Seq);
         var index = ExprToTla(expr.Index);
-        var val = ExprToTla(expr.Value);
+        string val = ExprToTla(expr.Value);
         // Note the +1 as TLA sequences are 1-indexed
         return String.Format("[{0} EXCEPT![{1}+1] = {2}]", seq, index, val);
     }
 
     private string DatatypeValueToTla(DatatypeValue expr) {
         if (expr.Arguments.Count == 0) {
-            return String.Format("\"{0}\"", expr.MemberName);
+            return String.Format("[type |-> \"{0}\"]", expr.MemberName);
         } 
         // This is a record we are dealing with 
         var type = expr.MemberName;
