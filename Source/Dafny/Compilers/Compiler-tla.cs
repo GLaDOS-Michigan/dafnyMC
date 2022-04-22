@@ -349,16 +349,18 @@ public class TLACompiler : Compiler {
     private string ForallExprToTla(ForallExpr expr) {
         var quantifiedVars = new List<string>();
         foreach (var bv in expr.BoundVars) {
-            quantifiedVars.Add(bv.CompileName);
+            var v = String.Format("{0} \\in {1}", bv.CompileName, TypeToTla(bv.Type));
+            quantifiedVars.Add(v);
         } 
-        var res = String.Format("\\A {0}: {1}", String.Join(",", quantifiedVars), ExprToTla(expr.LogicalBody()));
+        var res = String.Format("\\A {0}: {1}", String.Join(", ", quantifiedVars), ExprToTla(expr.LogicalBody()));
         return res;
     }
 
     private string ExistsExprToTla(ExistsExpr expr) {
         var quantifiedVars = new List<string>();
         foreach (var bv in expr.BoundVars) {
-            quantifiedVars.Add(bv.CompileName);
+            var v = String.Format("{0} \\in {1}", bv.CompileName, TypeToTla(bv.Type));
+            quantifiedVars.Add(v);
         } 
         var res = String.Format("\\E {0}: {1}", String.Join(", ", quantifiedVars), ExprToTla(expr.LogicalBody()));
         return res;
