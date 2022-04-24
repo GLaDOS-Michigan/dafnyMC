@@ -83,22 +83,26 @@ public class TLACompiler : Compiler {
 
     protected override IClassWriter DeclareDatatype(DatatypeDecl dt, ConcreteSyntaxTree wr) {
         Console.WriteLine("            TONY: Dealing with DatatypeDecl");
+        if (dt.TypeArgs.Count > 0) {
+            Console.WriteLine();
+            throw new NotImplementedException(String.Format("Parameterized datatype {0} '{1}' is not supported", dt, dt.FullName));
+        }
         if (dt.IsRecordType) {
             // IsRecordType is true implies that Ctors.Count == 1 and dt is IndDatatypeDecl
             var ctor = dt.Ctors[0]; 
             var record = DefineRecordType(ctor.Name, ctor.Formals);
             Console.WriteLine("                {0} == {1}", dt.Name, record);
-            records.Add(dt.Name, dt);
+            records.Add(dt.FullName, dt);
             wr.WriteLine("{0} == {1}", dt.Name, record);
         } else if (dt is IndDatatypeDecl) {
             // dt has multiple constructors
             Contract.Assert(dt.Ctors.Count > 1);
             Console.WriteLine("                {0} == {1}", dt.Name, DefineUnionType(dt.Ctors));
-            unions.Add(dt.Name, dt);
+            unions.Add(dt.FullName, dt);
             wr.WriteLine("{0} == {1}", dt.Name, DefineUnionType(dt.Ctors));
         } else {
             Console.WriteLine();
-            throw new NotImplementedException(String.Format("DeclareDatatype {0} '{1}' is not supported", dt, dt.WhatKind));
+            throw new NotImplementedException(String.Format("DeclareDatatype {0} '{1}' is not supported", dt, dt.FullName));
         }
         if (dt.Members.Count > 0) {
             // Disabling this feature;
