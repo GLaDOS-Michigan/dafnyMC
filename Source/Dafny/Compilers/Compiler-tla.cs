@@ -106,19 +106,21 @@ public class TLACompiler : Compiler {
             Console.WriteLine();
             throw new NotImplementedException(String.Format("Parameterized datatype {0} '{1}' is not supported", dt, dt.FullName));
         }
+        var enclosingModule = dt.EnclosingModuleDefinition.DafnyName;
+        var name = MangleDeclName(enclosingModule, dt.Name);
         if (dt.IsRecordType) {
             // IsRecordType is true implies that Ctors.Count == 1 and dt is IndDatatypeDecl
             var ctor = dt.Ctors[0]; 
-            var record = DefineRecordType(ctor.Name, ctor.Formals);
-            Console.WriteLine("                {0} == {1}", dt.Name, record);
+            var record = DefineRecordType(name, ctor.Formals);
+            Console.WriteLine("                {0} == {1}", name, record);
             records.Add(dt.FullName, dt);
-            wr.WriteLine("{0} == {1}", dt.Name, record);
+            wr.WriteLine("{0} == {1}", name, record);
         } else if (dt is IndDatatypeDecl) {
             // dt has multiple constructors
             Contract.Assert(dt.Ctors.Count > 1);
-            Console.WriteLine("                {0} == {1}", dt.Name, DefineUnionType(dt.Ctors));
+            Console.WriteLine("                {0} == {1}", name, DefineUnionType(dt.Ctors));
             unions.Add(dt.FullName, dt);
-            wr.WriteLine("{0} == {1}", dt.Name, DefineUnionType(dt.Ctors));
+            wr.WriteLine("{0} == {1}", name, DefineUnionType(dt.Ctors));
         } else {
             Console.WriteLine();
             throw new NotImplementedException(String.Format("DeclareDatatype {0} '{1}' is not supported", dt, dt.FullName));
@@ -133,7 +135,8 @@ public class TLACompiler : Compiler {
 
     public void DeclareTypeSynonym(TypeSynonymDecl dt, ConcreteSyntaxTree wr) {
         Console.WriteLine("            TONY: Dealing with TypeSynonymDecl");
-        var res = String.Format("{0} == {1}", dt.Name, dt.Rhs.ToString());
+        var name = MangleDeclName(dt.EnclosingModuleDefinition.DafnyName, dt.Name);
+        var res = String.Format("{0} == {1}", name, TypeToTla(dt.Rhs));
         Console.WriteLine("                {0}", res);
         wr.WriteLine(res);
     }
@@ -152,13 +155,20 @@ public class TLACompiler : Compiler {
         return String.Join(" \\union ", types);
     }
 
-    protected ConcreteSyntaxTree/*?*/ FuncToTlaOperator(string name, List<TypeArgumentInstantiation> typeArgs, List<Formal> formals, Type resultType, Expression body, Bpl.IToken tok, bool isStatic, bool createBody,
-      MemberDecl member, string ownerName, ConcreteSyntaxTree wr, bool forBodyInheritance, bool lookasideBody) {
+    protected ConcreteSyntaxTree/*?*/ FuncToTlaOperator(
+        string name, 
+        List<TypeArgumentInstantiation> typeArgs, 
+        List<Formal> formals, 
+        Type resultType, Expression body, 
+        Bpl.IToken tok, bool isStatic, bool createBody,
+        MemberDecl member, string moduleName, ConcreteSyntaxTree wr, 
+        bool forBodyInheritance, bool lookasideBody) 
+    {
         Console.WriteLine("                    Name: {0}", name);
         Console.WriteLine("                    Formals: ( {0} )", Printer.FormalListToString(formals));            
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(body));
         var arguments = from fm in formals select ReplacePrime(fm.CompileName);
-        name = MangleReservedIdent(name);
+        name = MangleDeclName(moduleName, name);
         if (arguments.Count() == 0) {
             wr.WriteLine("{0} == {1}", name, ExprToTla(body));
         } else {
@@ -175,7 +185,13 @@ public class TLACompiler : Compiler {
     /* Converts a Dafny type into a representation in TLA */
     private string TypeToTla(Type t) {
         var res = t.ToString();  // default
-        if (t is SetType) {
+        if (t is UserDefinedType) {
+            var ut = (UserDefinedType) t;
+            var moduleName = ut.ResolvedClass.EnclosingModuleDefinition.DafnyName;  // Module in which this type was declared
+            if (!String.Equals(moduleName, "anything so that it is nonnull")) {
+                res = MangleDeclName(moduleName, ut.Name); 
+            }
+        } else if (t is SetType) {
             var st = (SetType) t;
             res = String.Format("SUBSET {0}", TypeToTla(st.Arg));
         } else if (t is SeqType) {
@@ -257,7 +273,8 @@ public class TLACompiler : Compiler {
             return UnsupportedExpr(e);
         } else {
             var arguments = from a in e.Args select ExprToTla(a);
-            var name = MangleReservedIdent(e.Function.CompileName);
+            var moduleName = e.Function.EnclosingClass.FullDafnyName;
+            var name = MangleDeclName(moduleName, e.Function.CompileName);
             if (arguments.Count() == 0) {
                 return String.Format("{0}", name);
             } else {
@@ -888,6 +905,7 @@ public class TLACompiler : Compiler {
         return name.StartsWith("__") ? name[1..] : name;
     }
 
+    /* TLA does not allow names to begin with reserved words */
     private static string MangleReservedIdent(string name) {
         string res = name;
         foreach (var rn in RESERVED_IDENTS) {
@@ -896,6 +914,11 @@ public class TLACompiler : Compiler {
             }
         }
         return res;
+    }
+
+    /* Prepend module name to definition names */ 
+    private static string MangleDeclName(string moduleName, string name) {
+        return String.Format("{0}_{1}", MangleReservedIdent(moduleName), name);
     }
 
     protected override string IdProtect(string name) {
@@ -946,7 +969,8 @@ public class TLACompiler : Compiler {
         }
 
         public ConcreteSyntaxTree /*?*/ CreateFunction(string name, List<TypeArgumentInstantiation> typeArgs, List<Formal> formals, Type resultType, Expression body, Bpl.IToken tok, bool isStatic, bool createBody, MemberDecl member, bool forBodyInheritance, bool lookasideBody) {
-            return Compiler.FuncToTlaOperator(name, typeArgs, formals, resultType, body, tok, isStatic, createBody, member, ClassName, CtorBodyWriter, forBodyInheritance, lookasideBody);
+            var moduleName = member.EnclosingClass.FullDafnyName;
+            return Compiler.FuncToTlaOperator(name, typeArgs, formals, resultType, body, tok, isStatic, createBody, member, moduleName, CtorBodyWriter, forBodyInheritance, lookasideBody);
         }
 
         public ConcreteSyntaxTree /*?*/ CreateGetter(string name, TopLevelDecl enclosingDecl, Type resultType, Bpl.IToken tok, bool isStatic, bool isConst, bool createBody, MemberDecl /*?*/ member, bool forBodyInheritance) {
