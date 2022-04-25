@@ -1,4 +1,4 @@
-// Chapter 5 Exercise 1
+// Chapter 5 Exercise 1, 2
 //#title Two Phase Commit Model
 //#desc Model a distributed protocol using compound state machines.
 
@@ -438,3 +438,110 @@ module DistributedSystem {
         exists step :: NextStep(c, v, v', step)
     }
 }
+
+module Obligations {
+    import opened CommitTypes
+    import opened Types
+    import opened Library
+    import opened DistributedSystem
+
+    // Here are some handy accessor functions for dereferencing the coordinator
+    // and the participants out of the sequence in Hosts.
+    function CoordinatorConstants(c: Constants) : CoordinatorHost.Constants
+        requires DistributedSystem.WF_Constants(c)
+    {
+        Last(c.hosts).coordinator
+    }
+
+    function CoordinatorVars(c: Constants, v: Variables) : CoordinatorHost.Variables
+        requires WF_Variables(c, v)
+    {
+        Last(v.hosts).coordinator
+    }
+
+    predicate ValidParticipantId(c: Constants, hostid: HostId)
+    {
+        hostid < |c.hosts|-1
+    }
+
+    function ParticipantConstants(c: Constants, hostid: HostId) : ParticipantHost.Constants
+        requires DistributedSystem.WF_Constants(c)
+        requires ValidParticipantId(c, hostid)
+    {
+        c.hosts[hostid].participant
+    }
+
+    function ParticipantVars(c: Constants, v: Variables, hostid: HostId) : ParticipantHost.Variables
+        requires WF_Variables(c, v)
+        requires ValidParticipantId(c, hostid)
+    {
+        v.hosts[hostid].participant
+    }
+
+    predicate AllWithDecisionAgreeWithThisOne(c: Constants, v: Variables, decision: Decision)
+        requires WF_Variables(c, v)
+        // I pulled this conjunction into a named predicate because Dafny warned of
+        // no trigger for the exists.
+    {
+        && (CoordinatorVars(c, v).decision.Some? ==> CoordinatorVars(c, v).decision.value == decision)
+        && (forall hostid:HostId
+        | ValidParticipantId(c, hostid) && ParticipantVars(c, v, hostid).decision.Some?
+        :: ParticipantVars(c, v, hostid).decision.value == decision)
+    }
+
+    // AC-1: All processes that reach a decision reach the same one.
+    predicate SafetyAC1(c: Constants, v: Variables)
+        requires WF_Variables(c, v)
+    {
+        // All hosts that reach a decision reach the same one
+        || AllWithDecisionAgreeWithThisOne(c, v, Commit)
+        || AllWithDecisionAgreeWithThisOne(c, v, Abort)
+    }
+
+    // AC2 is sort of a history predicate; we're going to ignore it.
+
+    // AC-3: The Commit decision can only be reached if all processes prefer Yes.
+    predicate SafetyAC3(c: Constants, v: Variables)
+        requires WF_Variables(c, v)
+    {
+        && (exists hostid:HostId
+        :: ValidParticipantId(c, hostid) && ParticipantConstants(c, hostid).preference.No?)
+        ==> AllWithDecisionAgreeWithThisOne(c, v, Abort)
+    }
+
+    // AC-4: If all processes prefer Yes, then the decision must be Commit.
+    predicate SafetyAC4(c: Constants, v: Variables)
+        requires WF_Variables(c, v)
+    {
+        && (forall hostid:HostId
+            | ValidParticipantId(c, hostid) :: ParticipantConstants(c, hostid).preference.Yes?)
+        ==> AllWithDecisionAgreeWithThisOne(c, v, Commit)
+    }
+
+    // AC5 is a liveness proprety, we're definitely going to ignore it.
+
+    //#instructor Player 1
+    predicate Safety(c: Constants, v: Variables)
+        requires WF_Variables(c, v)
+    {
+        && SafetyAC1(c, v)
+        && SafetyAC3(c, v)
+        && SafetyAC4(c, v)
+    }
+}
+
+/**
+tla_Init == /\ tla_c \in DistributedSystem_Constants 
+            /\ Cardinality(DOMAIN(tla_c.hosts)) = 2
+            /\ tla_c.network = [type |-> "Network_Constants"]
+            /\ tla_s \in DistributedSystem_Variables 
+            /\ DistributedSystem_Init(tla_c, tla_s)
+
+tla_Next == /\ tla_c' = tla_c
+            /\ tla_s' \in DistributedSystem_Variables 
+            /\ DistributedSystem_Next(tla_c, tla_s, tla_s')
+
+tla_Spec == tla_Init /\ [][tla_Next]_(tla_s)
+
+tla_Safety == Obligations_Safety(tla_c, tla_s) \* User input
+**/
