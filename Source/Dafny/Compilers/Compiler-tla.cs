@@ -237,7 +237,7 @@ public class TLACompiler : Compiler {
     private string LiteralExprToTla(LiteralExpr e) {
 
         if (e.Value is bool) {
-            return (bool)e.Value ? "true" : "false";
+            return (bool)e.Value ? "TRUE" : "FALSE";
         } else if (e is StringLiteralExpr) {
             var str = (StringLiteralExpr)e;
             return String.Format("{0}", Printer.ExprToString(str));
