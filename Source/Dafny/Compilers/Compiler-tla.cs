@@ -411,7 +411,7 @@ public class TLACompiler : Compiler {
         var opString = "dummy opString";
         switch (op) {
             case BinaryExpr.ResolvedOpcode.Iff:
-                opString = "=="; break;
+                opString = "<=>"; break;
             case BinaryExpr.ResolvedOpcode.Imp:
                 opString = "=>"; break;
             case BinaryExpr.ResolvedOpcode.And:
