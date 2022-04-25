@@ -14,6 +14,25 @@ public class TLACompiler : Compiler {
     public TLACompiler(ErrorReporter reporter) : base(reporter) {
     }
 
+    private static string[] RESERVED_IDENTS =
+    { 
+        "ASSUME",        "ELSE",       "LOCAL",       "UNION",     
+        "ASSUMPTION",    "ENABLED",    "MODULE",      "VARIABLE",   
+        "AXIOM",         "EXCEPT",     "OTHER",      "VARIABLES",  
+        "CASE",          "EXTENDS",    "SF_",         "WF_",      
+        "CHOOSE",        "IF",         "SUBSET",      "WITH", 
+        "CONSTANT",      "IN",         "THEN",               
+        "CONSTANTS" ,    "INSTANCE",   "THEOREM",     "COROLLARY",
+        "DOMAIN",        "LET",        "UNCHANGED",   
+        "BY",            "HAVE",       "QED",         "TAKE",                   
+        "DEF",           "HIDE",       "RECURSIVE",   "USE", 
+        "DEFINE",        "PROOF",      "WITNESS",     "PICK",
+        "DEFS",          "PROVE",      "SUFFICES",    "NEW",
+        "LAMBDA",        "STATE",      "ACTION",      "TEMPORAL",   
+        "OBVIOUS",       "OMITTED",    "LEMMA",       "PROPOSITION",
+        "ONLY"
+    };
+
     public override string TargetLanguage => "TLA";
     protected override string StmtTerminator { get => ""; }
 
@@ -139,6 +158,7 @@ public class TLACompiler : Compiler {
         Console.WriteLine("                    Formals: ( {0} )", Printer.FormalListToString(formals));            
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(body));
         var arguments = from fm in formals select ReplacePrime(fm.CompileName);
+        name = MangleReservedIdent(name);
         if (arguments.Count() == 0) {
             wr.WriteLine("{0} == {1}", name, ExprToTla(body));
         } else {
@@ -229,21 +249,19 @@ public class TLACompiler : Compiler {
     }
 
     private string IdentifierExprToTla(IdentifierExpr expr){   
-        return ReplaceHash(ReplacePrime(expr.Var.CompileName));
+        return ReplaceHash(ReplacePrime(MangleReservedIdent(expr.Var.CompileName)));
     }
 
     private string FunctionCallToTla(FunctionCallExpr e){   
         if (e.Function is SpecialFunction) {
             return UnsupportedExpr(e);
         } else {
-            var arguments = new List<string>();
-            foreach (var arg in e.Args) {
-                arguments.Add(ExprToTla(arg));
-            }
-            if (arguments.Count == 0) {
-                return String.Format("{0}", e.Function.CompileName);
+            var arguments = from a in e.Args select ExprToTla(a);
+            var name = MangleReservedIdent(e.Function.CompileName);
+            if (arguments.Count() == 0) {
+                return String.Format("{0}", name);
             } else {
-                return String.Format("{0}({1})", e.Function.CompileName, String.Join(", ", arguments));
+                return String.Format("{0}({1})", name, String.Join(", ", arguments));
             }
         }
     }
@@ -868,6 +886,16 @@ public class TLACompiler : Compiler {
     
     private static string MangleName(string name) {
         return name.StartsWith("__") ? name[1..] : name;
+    }
+
+    private static string MangleReservedIdent(string name) {
+        string res = name;
+        foreach (var rn in RESERVED_IDENTS) {
+            if (name.StartsWith(rn)) {
+                res = String.Format("x{0}", name);
+            }
+        }
+        return res;
     }
 
     protected override string IdProtect(string name) {
