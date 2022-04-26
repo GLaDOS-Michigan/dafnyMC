@@ -52,15 +52,12 @@ public class TLACompiler : Compiler {
         wr.WriteLine("---------------------------------- MODULE {0} ----------------------------------", Path.GetFileNameWithoutExtension(program.Name));
         wr.WriteLine("\\* Dafny module {0} compiled into TLA", program.Name);
         wr.WriteLine();
-        wr.WriteLine("EXTENDS Integers, FiniteSets");    // Common enough to always do this 
+        wr.WriteLine("EXTENDS Integers, FiniteSets, Sequences");    // Common enough to always do this 
         wr.WriteLine();
         wr.WriteLine("CONSTANT {0}", TLA_CONST); 
         wr.WriteLine("VARIABLE {0}", TLA_STATE); 
         wr.WriteLine();
-        // Link local type declarations to dafny type
-        wr.WriteLine("int == Int");
-        wr.WriteLine("nat == Nat");
-        wr.WriteLine("bool == BOOLEAN");
+        ReadRuntimeSystem("DafnyRuntime.tla", wr);
     } 
 
     protected override void EmitFooter(Program program, ConcreteSyntaxTree wr) {
@@ -480,7 +477,7 @@ public class TLACompiler : Compiler {
             case BinaryExpr.ResolvedOpcode.SeqEq:
                 opString = "="; break;
             case BinaryExpr.ResolvedOpcode.InSeq:
-                opString = "\\in"; break;
+                return String.Format("Contains({0}, {1})", ExprToTla(e1), ExprToTla(e0));
             case BinaryExpr.ResolvedOpcode.Union:
                 opString = "\\union"; break;
             case BinaryExpr.ResolvedOpcode.MapEq:
