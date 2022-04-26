@@ -532,16 +532,32 @@ module Obligations {
 
 /**
 tla_Init == /\ tla_c \in DistributedSystem_Constants 
-            /\ Cardinality(DOMAIN(tla_c.hosts)) = 2
-            /\ tla_c.network = [type |-> "Network_Constants"]
             /\ tla_s \in DistributedSystem_Variables 
             /\ DistributedSystem_Init(tla_c, tla_s)
 
-tla_Next == /\ tla_c' = tla_c
-            /\ tla_s' \in DistributedSystem_Variables 
+tla_Next == /\ tla_s' \in DistributedSystem_Variables 
             /\ DistributedSystem_Next(tla_c, tla_s, tla_s')
 
 tla_Spec == tla_Init /\ [][tla_Next]_(tla_s)
 
 tla_Safety == Obligations_Safety(tla_c, tla_s) \* User input
+
+
+------------------------------ MODULE MCtwoPC ------------------------------
+EXTENDS twoPC
+
+MC_Int == 0..2
+MC_Nat == 0..2
+
+p0 ==  [type |-> "ParticipantHost_Constants", hostId |-> 0, preference |-> [type |-> "Yes"]]
+c ==  [type |-> "CoordinatorHost_Constants", participantCount |-> 1]
+
+p0_host == [type |-> "ParticipantConstants", participant |-> p0]
+c_host == [type |-> "CoordinatorConstants", coordinator |-> c]
+net == [type |-> "Network_Constants"]
+
+ds == [type |-> "DistributedSystem_Constants", hosts |-> <<p0_host, c_host>>, network |-> net]
+
+
+=============================================================================
 **/
