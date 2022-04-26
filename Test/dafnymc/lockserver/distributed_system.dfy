@@ -118,4 +118,39 @@ predicate Next(c:Constants, ds:DistrSys, ds':DistrSys) {
     && dsWF(c, ds')
     && exists actor, recvIo, sendIo :: NextOneAgent(c, ds, ds', actor, recvIo, sendIo)
 }
+
+
+/*****************************************************************************************
+*                                        Safety                                          *
+*****************************************************************************************/
+
+/* Is this client in the Working state? */
+predicate ClientIsWorking(cons:Constants, ds:DistrSys, cidx:int)
+    requires WF(cons) && dsWF(cons, ds)
+    requires ValidClientIdx(cons, cidx)
+{
+    ds.clients[cidx].state.Working?
 }
+
+/* Safety Property: No two clients can be working on the same server */
+predicate Safety(cons:Constants, ds:DistrSys) 
+    requires WF(cons) && dsWF(cons, ds)
+{
+    forall i, j | 
+        && ValidClientIdx(cons, i)
+        && ValidClientIdx(cons, j)
+        && ClientIsWorking(cons, ds, i)
+        && ClientIsWorking(cons, ds, j)
+        && ds.clients[i].state.sid == ds.clients[j].state.sid
+    ::
+        i == j
+}
+}
+
+/**
+tla_Init == tla_s \in System_DistrSys /\ System_Init(tla_c, tla_s)
+tla_Next == tla_s' \in System_DistrSys /\ System_Next(tla_c, tla_s, tla_s')
+tla_Spec == tla_Init /\ [][tla_Next]_(tla_s)
+
+tla_Safety == System_Safety(tla_c, tla_s)
+**/
