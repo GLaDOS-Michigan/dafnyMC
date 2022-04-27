@@ -57,8 +57,8 @@ public class TLACompiler : Compiler {
         wr.WriteLine();
         wr.WriteLine("EXTENDS Integers, FiniteSets, Sequences");    // Common enough to always do this 
         wr.WriteLine();
-        wr.WriteLine("CONSTANT {0}", TLA_CONST); 
-        wr.WriteLine("VARIABLE {0}", TLA_STATE); 
+        wr.WriteLine("CONSTANT\n\\* @type: apalache type annotation\n    {0}", TLA_CONST); 
+        wr.WriteLine("VARIABLE\n\\* @type: apalache type annotation\n    {0}", TLA_STATE); 
         wr.WriteLine();
         ReadRuntimeSystem("DafnyRuntime.tla", wr);
     } 
@@ -169,6 +169,7 @@ public class TLACompiler : Compiler {
         Console.WriteLine("                    Body: {0}", Printer.ExprToString(body));
         var arguments = from fm in formals select ReplacePrime(fm.CompileName);
         name = MangleDeclName(moduleName, name);
+        WriteApalacheOperatorAnnotation(formals, resultType, wr);
         if (arguments.Count() == 0) {
             wr.WriteLine("{0} == {1}", name, ExprToTla(body));
         } else {
@@ -178,9 +179,81 @@ public class TLACompiler : Compiler {
         return wr;
     }
 
-    private string UnsupportedExpr(Expression expr) {
-        Console.WriteLine(); throw new NotSupportedException(String.Format("TLA compiler does not support expression {0}: '{1}'",    expr, Printer.ExprToString(expr)));
+    protected void WriteApalacheOperatorAnnotation(
+        List<Formal> formals, 
+        Type resultType,
+        ConcreteSyntaxTree wr) 
+    {
+        if (!ApalacheMode) {
+            return;
+        }
+        var arguments = from arg in formals select TypeToApalache(arg.Type);
+        wr.WriteLine("\\* @type: ({0}) => {1};", String.Join(", ", arguments), TypeToApalache(resultType));
     }
+
+    /* Converts a Dafny type into a representation in Apalache */
+    private string TypeToApalache(Type t) {
+        void NotSupported(Type t){
+            Console.WriteLine(); 
+            throw new NotSupportedException(String.Format("Type {0} is not supported in Apalache", t.ToString()));
+        }
+        Contract.Assert(t is NonProxyType);
+        var res = "";
+        if (t is BasicType ||  String.Equals(t.ToString(), "string")) {
+            // Base case
+            if (t is BoolType) {
+                res = "Bool";
+            } else if (t is IntType) {
+                res = "Int";
+            } else if (String.Equals(t.ToString(), "string")) {
+                res = "Str";
+            } else {
+                NotSupported(t);
+            }
+        } else if (t is UserDefinedType) {
+            Contract.Assert(t.IsDatatype);
+            var dt = t.AsDatatype;
+            if (dt.IsRecordType) {
+                // IsRecordType is true implies that Ctors.Count == 1 and dt is IndDatatypeDecl
+                var ctor = dt.Ctors[0]; 
+                res = ApalacheRecordAnnotation(ctor.Formals);
+            } else if (dt is IndDatatypeDecl) {
+                // dt has multiple constructors
+                Contract.Assert(dt.Ctors.Count > 1);
+                res = "TODO: Union type";
+                NotSupported(t);
+            } else {
+                NotSupported(t);
+            }
+        } else if (t is CollectionType) {
+            if (t is SetType) {
+                var st = (SetType) t;
+                res = String.Format("Set({0})", TypeToApalache(st.Arg));
+            } else if (t is SeqType) {
+                var st = (SeqType) t;
+                res = String.Format("Seq({0})", TypeToApalache(st.Arg));
+            } else if (t is MapType) {
+                var mt = (MapType) t;
+                res = String.Format("{0} -> {1}", TypeToApalache(mt.Domain), TypeToApalache(mt.Range));
+            } else {
+                NotSupported(t);
+            }
+        } else {
+            NotSupported(t);
+        }
+        return res;
+    }
+
+    /* Generates type annotation for records in Apalache */
+    private string ApalacheRecordAnnotation(List<Formal> fields) {
+        if (fields.Count == 0) {
+            return String.Format("[type : Str]");
+        } else {
+            var items = from f in fields select String.Format("{0} : {1}", f.Name, TypeToApalache(f.Type));
+            return String.Format("[type : Str, {0}]", String.Join(", ", items));
+        }
+    }
+
 
     /* Converts a Dafny type into a representation in TLA */
     private string TypeToTla(Type t) {
@@ -889,6 +962,12 @@ public class TLACompiler : Compiler {
     /*************************************************************************************
     *                                        Utils                                       *
     **************************************************************************************/
+
+    private string UnsupportedExpr(Expression expr) {
+        Console.WriteLine(); 
+        throw new NotSupportedException(String.Format("TLA compiler does not support expression {0}: '{1}'",
+            expr, Printer.ExprToString(expr)));
+    }
 
     /* Dafny's AST sometimes have variable names with the hash symbol #. This is not 
     *  allowed in TLA, so we replace them with underscore _ */
