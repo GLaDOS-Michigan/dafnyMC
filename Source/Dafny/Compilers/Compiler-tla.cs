@@ -143,10 +143,10 @@ public class TLACompiler : Compiler {
 
     private string DefineRecordType(string name, List<Formal> fields) {
         if (fields.Count == 0) {
-            return String.Format("[type : {{\"{0}\"}}]", name);
+            return String.Format("[tag : {{\"{0}\"}}]", name);
         } else {
             var items = from f in fields select String.Format("{0} : {1}", f.Name, TypeToTla(f.Type));
-            return String.Format("[type : {{\"{0}\"}}, {1}]", name, String.Join(", ", items));
+            return String.Format("[tag : {{\"{0}\"}}, {1}]", name, String.Join(", ", items));
         }
     }
 
@@ -197,13 +197,18 @@ public class TLACompiler : Compiler {
             Console.WriteLine(); 
             throw new NotSupportedException(String.Format("Type {0} is not supported in Apalache", t.ToString()));
         }
+        bool IsBasicType(Type t){
+            return t is BasicType 
+                || String.Equals(t.ToString(), "string")
+                || String.Equals(t.ToString(), "nat");
+        }
         Contract.Assert(t is NonProxyType);
         var res = "";
-        if (t is BasicType ||  String.Equals(t.ToString(), "string")) {
+        if (IsBasicType(t)) {
             // Base case
             if (t is BoolType) {
                 res = "Bool";
-            } else if (t is IntType) {
+            } else if (t is IntType || String.Equals(t.ToString(), "nat")) {
                 res = "Int";
             } else if (String.Equals(t.ToString(), "string")) {
                 res = "Str";
@@ -247,10 +252,10 @@ public class TLACompiler : Compiler {
     /* Generates type annotation for records in Apalache */
     private string ApalacheRecordAnnotation(List<Formal> fields) {
         if (fields.Count == 0) {
-            return String.Format("[type : Str]");
+            return String.Format("[tag : Str]");
         } else {
             var items = from f in fields select String.Format("{0} : {1}", f.Name, TypeToApalache(f.Type));
-            return String.Format("[type : Str, {0}]", String.Join(", ", items));
+            return String.Format("[tag : Str, {0}]", String.Join(", ", items));
         }
     }
 
