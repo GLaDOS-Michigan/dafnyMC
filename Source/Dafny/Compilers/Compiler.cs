@@ -38,6 +38,7 @@ namespace Microsoft.Dafny {
     }
 
     public void NotSupportedByTlaCompiler() {
+      // Note that all Apalache programs are TLA programs
       if (IsTlaCompiler()) {
         throw new NotSupportedException();
       }

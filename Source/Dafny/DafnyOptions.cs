@@ -85,7 +85,8 @@ namespace Microsoft.Dafny {
       Cpp = 16,
       Php = 32,
       Python = 64,
-      TLA = 128
+      TLA = 128,
+      Apalache = 256
     }
 
     public CompilationTarget CompileTarget = CompilationTarget.Csharp;
@@ -235,6 +236,9 @@ namespace Microsoft.Dafny {
             } else if (args[ps.i].Equals("tla")) {
               CompileTarget = CompilationTarget.TLA;
               Console.WriteLine("Wow, you are using the /compileTarget:tla feature!");
+            } else if (args[ps.i].Equals("apa")) {
+              CompileTarget = CompilationTarget.Apalache;
+              Console.WriteLine("Mama mia, you are using the /compileTarget:apa feature!");
             } else {
               InvalidArgumentError(name, ps);
             }

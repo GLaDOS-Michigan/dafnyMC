@@ -591,6 +591,10 @@ namespace Microsoft.Dafny {
           targetExtension = "tla";
           targetBaseDir = baseName + "-tla";
           break;
+        case DafnyOptions.CompilationTarget.Apalache:
+          targetExtension = "tla";
+          targetBaseDir = baseName + "-apalache";
+          break;
 
         default:
           Contract.Assert(false);
@@ -720,7 +724,11 @@ namespace Microsoft.Dafny {
           break;
         case DafnyOptions.CompilationTarget.TLA:
           Console.WriteLine("TONY: Compiling to TLA");
-          compiler = new Dafny.TLACompiler(dafnyProgram.reporter);
+          compiler = new Dafny.TLACompiler(dafnyProgram.reporter, false);
+          break;
+        case DafnyOptions.CompilationTarget.Apalache:
+          Console.WriteLine("TONY: Compiling to TLA (Apalache mode)");
+          compiler = new Dafny.TLACompiler(dafnyProgram.reporter, true);
           break;
       }
 

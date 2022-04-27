@@ -11,7 +11,8 @@ using Bpl = Microsoft.Boogie;
 
 namespace Microsoft.Dafny {
 public class TLACompiler : Compiler {
-    public TLACompiler(ErrorReporter reporter) : base(reporter) {
+    public TLACompiler(ErrorReporter reporter, bool apalacheMode) : base(reporter) {
+        ApalacheMode = apalacheMode;
     }
 
     private static string[] RESERVED_IDENTS =
@@ -35,6 +36,8 @@ public class TLACompiler : Compiler {
 
     public override string TargetLanguage => "TLA";
     protected override string StmtTerminator { get => ""; }
+
+    protected bool ApalacheMode = false;
 
     protected string SystemState = "State";
     protected string InitPred = "Init";

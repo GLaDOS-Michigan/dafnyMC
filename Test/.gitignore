@@ -30,6 +30,9 @@
 # TLA output
 **/*-tla
 
+# Apalache output
+**/*-apalache
+
 node_modules/
 package-lock.json
 packages
