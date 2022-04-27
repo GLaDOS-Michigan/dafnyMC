@@ -225,8 +225,7 @@ public class TLACompiler : Compiler {
             } else if (dt is IndDatatypeDecl) {
                 // dt has multiple constructors
                 Contract.Assert(dt.Ctors.Count > 1);
-                res = "TODO: Union type";
-                NotSupported(t);
+                res = ApalacheUnionAnnotation(dt.Ctors);
             } else {
                 NotSupported(t);
             }
@@ -259,6 +258,12 @@ public class TLACompiler : Compiler {
         }
     }
 
+    private string ApalacheUnionAnnotation(List<DatatypeCtor> ctors) {
+        // var types = from c in ctors select ApalacheRecordAnnotation(c.Formals);
+        // return String.Join(" | ", types);
+        return "variant type";
+    }
+
 
     /* Converts a Dafny type into a representation in TLA */
     private string TypeToTla(Type t) {
@@ -266,9 +271,7 @@ public class TLACompiler : Compiler {
         if (t is UserDefinedType) {
             var ut = (UserDefinedType) t;
             var moduleName = ut.ResolvedClass.EnclosingModuleDefinition.DafnyName;  // Module in which this type was declared
-            if (!String.Equals(moduleName, "anything so that it is nonnull")) {
-                res = MangleDeclName(moduleName, ut.Name); 
-            }
+            res = MangleDeclName(moduleName, ut.Name); 
         } else if (t is SetType) {
             var st = (SetType) t;
             res = String.Format("SUBSET {0}", TypeToTla(st.Arg));
@@ -558,7 +561,7 @@ public class TLACompiler : Compiler {
             case BinaryExpr.ResolvedOpcode.SeqEq:
                 opString = "="; break;
             case BinaryExpr.ResolvedOpcode.InSeq:
-                return String.Format("Contains({0}, {1})", ExprToTla(e1), ExprToTla(e0));
+                return String.Format("tla_Contains({0}, {1})", ExprToTla(e1), ExprToTla(e0));
             case BinaryExpr.ResolvedOpcode.Union:
                 opString = "\\union"; break;
             case BinaryExpr.ResolvedOpcode.MapEq:
@@ -1002,7 +1005,14 @@ public class TLACompiler : Compiler {
 
     /* Prepend module name to definition names */ 
     private static string MangleDeclName(string moduleName, string name) {
-        return String.Format("{0}_{1}", MangleReservedIdent(moduleName), name);
+        string res;
+        Console.WriteLine(moduleName);
+        if (!(String.Equals(moduleName, "anything so that it is nonnull") || String.Equals(moduleName, ""))) {
+            res = String.Format("{0}_{1}", MangleReservedIdent(moduleName), name);
+        } else {
+            res = String.Format("{0}", MangleReservedIdent(name));
+        }
+        return res;
     }
 
     protected override string IdProtect(string name) {
