@@ -87,10 +87,13 @@ lemma NonTrivialRestock()
 }
 
 /* 
-tla_Init == tla_c \in Constants /\ tla_s \in CokeMachine /\ Init(tla_c, tla_s)
-tla_Next == tla_s' \in CokeMachine /\ Next(tla_c, tla_s, tla_s')
+MC_c == [type |-> "Machine_Constants", capacity |-> 200]
+MCInt == 0..300
+
+tla_Init == tla_c \in Machine_Constants /\ tla_s \in Machine_CokeMachine /\ Machine_Init(tla_c, tla_s)
+tla_Next == tla_s' \in Machine_CokeMachine /\ Machine_Next(tla_c, tla_s, tla_s')
 tla_Spec == tla_Init /\ [][tla_Next]_(tla_s)
 
-tla_Safety == Inv(tla_c, tla_s)
+tla_Safety == Machine_Inv(tla_c, tla_s)
 */
 }
