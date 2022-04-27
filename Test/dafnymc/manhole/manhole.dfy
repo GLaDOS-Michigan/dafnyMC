@@ -34,6 +34,12 @@ predicate Safety(s:State) {
     !InManhole(s)
 }
 
-
-
 }
+
+/**
+tla_Init == tla_s \in Manhole_State /\ Manhole_Init(tla_s)
+tla_Next == tla_s' \in Manhole_State /\ Manhole_Next(tla_s, tla_s')
+tla_Spec == tla_Init /\ [][tla_Next]_(tla_s)
+
+tla_Safety == Manhole_Safety(tla_s) 
+**/
