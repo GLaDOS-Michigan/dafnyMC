@@ -92,6 +92,14 @@ predicate Safety(c:Constants, v:Variables) {
 }
 
 /*
+CONSTANT
+\* @type: [tag : Str, clientCount : Int];
+    tla_c
+VARIABLE
+\* @type: [tag : Str, server : {tag : Str} | {tag : Str, id : Int}, clients : Seq({tag : Str} | {tag : Str})];
+    tla_s
+
+
 tla_Init == /\ tla_c \in Constants 
             /\ tla_s \in Variables 
             /\ Init(tla_c, tla_s)

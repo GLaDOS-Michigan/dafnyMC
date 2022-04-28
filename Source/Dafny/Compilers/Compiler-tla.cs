@@ -221,7 +221,7 @@ public class TLACompiler : Compiler {
             if (dt.IsRecordType) {
                 // IsRecordType is true implies that Ctors.Count == 1 and dt is IndDatatypeDecl
                 var ctor = dt.Ctors[0]; 
-                res = ApalacheRecordAnnotation(ctor.Formals);
+                res = ApalacheRecordAnnotation(ctor.Formals, false);
             } else if (dt is IndDatatypeDecl) {
                 // dt has multiple constructors
                 Contract.Assert(dt.Ctors.Count > 1);
@@ -249,19 +249,26 @@ public class TLACompiler : Compiler {
     }
 
     /* Generates type annotation for records in Apalache */
-    private string ApalacheRecordAnnotation(List<Formal> fields) {
+    private string ApalacheRecordAnnotation(List<Formal> fields, bool isVariantMember) {
+        string res;
         if (fields.Count == 0) {
-            return String.Format("[tag : Str]");
+            res = String.Format("[tag : Str]");
         } else {
             var items = from f in fields select String.Format("{0} : {1}", f.Name, TypeToApalache(f.Type));
-            return String.Format("[tag : Str, {0}]", String.Join(", ", items));
+            res = String.Format("[tag : Str, {0}]", String.Join(", ", items));
         }
+        if (isVariantMember) {
+            // Change square brackets to braces, as required by Apalache
+            res = "{" + res.Substring(1, res.Length-2) + "}";
+        }
+        return res;
     }
 
     private string ApalacheUnionAnnotation(List<DatatypeCtor> ctors) {
-        // var types = from c in ctors select ApalacheRecordAnnotation(c.Formals);
-        // return String.Join(" | ", types);
-        return "variant type";
+        Console.WriteLine(); 
+        throw new NotSupportedException("Variant types not yet supported in Apalache 0.24.1");
+        var types = from c in ctors select ApalacheRecordAnnotation(c.Formals, true);
+        return String.Join(" | ", types);
     }
 
 
